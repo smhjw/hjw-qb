@@ -1,11 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">QB 远程</string>
-    <string name="top_title">qB 远程</string>
+    <string name="app_name">qbremote</string>
+
+    <string name="menu_settings">设置</string>
+    <string name="menu_theme">主题</string>
+    <string name="theme_dark">深色主题</string>
+    <string name="theme_light">浅色主题</string>
+    <string name="back">返回</string>
+    <string name="go_to_settings">前往设置</string>
 
     <string name="settings_title">设置</string>
-    <string name="settings_show_speed_totals">显示速度总计</string>
-    <string name="settings_enable_server_grouping">启用服务器分组</string>
+    <string name="settings_show_speed_totals">显示总上传/下载量</string>
+    <string name="settings_enable_server_grouping">按站点分组显示</string>
     <string name="settings_show_chart_panel">显示图表面板</string>
     <string name="settings_show_site_name">图表中显示站点名称</string>
     <string name="settings_chart_sort_mode">图表排序方式</string>
@@ -13,77 +19,186 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh_cn">简体中文</string>
     <string name="settings_language_en">English</string>
-    <string name="settings_delete_when_no_seeders">无做种时默认删除文件</string>
-    <string name="settings_delete_by_default">默认删除文件</string>
+    <string name="settings_language_save">保存</string>
+    <string name="settings_language_apply_hint">选择语言后点击“保存”，并立即生效</string>
+    <string name="settings_delete_when_no_seeders">无做种时默认勾选删除文件</string>
+    <string name="settings_delete_by_default">删除种子时默认勾选删除文件</string>
     <string name="done">完成</string>
 
-    <string name="connect_first_hint">请先连接后再加载种子列表。</string>
+    <string name="connect_first_hint">请先连接 qBittorrent 服务器后再查看种子详情。</string>
     <string name="connection_title">连接设置</string>
     <string name="connection_host_label">主机 / IP</string>
-    <string name="connection_host_hint">例如：192.168.1.12</string>
+    <string name="connection_host_hint">例如：192.168.1.12 或 https://qb.example.com</string>
     <string name="connection_port_label">端口</string>
     <string name="connection_refresh_label">刷新间隔（秒）</string>
     <string name="connection_username_label">用户名</string>
     <string name="connection_password_label">密码</string>
     <string name="connection_https_label">HTTPS</string>
     <string name="connect">连接</string>
-    <string name="connecting">连接中...</string>
+    <string name="connecting">连接中…</string>
 
     <string name="global_transfer_title">全局传输</string>
     <string name="refresh">刷新</string>
-    <string name="refreshing">刷新中...</string>
-    <string name="global_down_fmt">下载：%1$s</string>
-    <string name="global_up_fmt">上传：%1$s</string>
-    <string name="global_total_down_fmt">总下载：%1$s</string>
-    <string name="global_total_up_fmt">总上传：%1$s</string>
-    <string name="global_dht_torrents_fmt">DHT：%1$d  |  任务数：%2$d</string>
+    <string name="refreshing">刷新中…</string>
+    <string name="global_down_fmt">下载速度：%1$s</string>
+    <string name="global_up_fmt">上传速度：%1$s</string>
+    <string name="global_total_down_fmt">总下载量：%1$s</string>
+    <string name="global_total_up_fmt">总上传量：%1$s</string>
+    <string name="global_dht_torrents_fmt">DHT 节点：%1$d ｜ 种子数：%2$d</string>
+    <string name="server_version_fmt">版本 %1$s</string>
 
     <string name="chart_panel_title_fmt">图表面板（%1$s）</string>
     <string name="chart_no_data">暂无图表数据。</string>
     <string name="chart_sort_total_speed">总速度</string>
     <string name="chart_sort_download_speed">下载速度</string>
     <string name="chart_sort_upload_speed">上传速度</string>
-    <string name="chart_sort_torrent_count">任务数量</string>
-    <string name="chart_metric_total_fmt">总计：%1$s</string>
+    <string name="chart_sort_torrent_count">种子数量</string>
+    <string name="chart_metric_total_fmt">总速度：%1$s</string>
     <string name="chart_metric_down_fmt">下载：%1$s</string>
     <string name="chart_metric_up_fmt">上传：%1$s</string>
-    <string name="chart_metric_torrents_fmt">任务数：%1$d</string>
+    <string name="chart_metric_torrents_fmt">种子数：%1$d</string>
 
-    <string name="filter_all">全部</string>
-    <string name="filter_downloading">下载中</string>
-    <string name="filter_seeding">做种中</string>
-    <string name="filter_paused">已暂停</string>
-    <string name="filter_completed">已完成</string>
-    <string name="filter_error">异常</string>
-
-    <string name="sort_title">排序</string>
-    <string name="sort_asc">升序</string>
-    <string name="sort_desc">降序</string>
-    <string name="sort_activity_time">活动时间</string>
-    <string name="sort_added_time">添加时间</string>
-    <string name="sort_download_speed">下载速度</string>
-    <string name="sort_upload_speed">上传速度</string>
+    <string name="status_uploading">上传中</string>
+    <string name="status_downloading">下载中</string>
+    <string name="status_paused">暂停中</string>
+    <string name="status_error">错误</string>
+    <string name="status_checking">校验中</string>
+    <string name="status_waiting">等待中</string>
+    <string name="status_total_torrents">总种子</string>
 
     <string name="state_downloading">下载中</string>
     <string name="state_seeding">做种中</string>
     <string name="state_paused">已暂停</string>
     <string name="state_error">异常</string>
     <string name="state_queued">排队中</string>
+    <string name="state_metadata">获取元数据</string>
+    <string name="state_checking">校验中</string>
+    <string name="state_preparing">准备中</string>
+    <string name="state_stopped">已停止</string>
+    <string name="state_forced">强制中</string>
+    <string name="state_unknown">未知</string>
 
     <string name="no_tags">无标签</string>
+    <string name="no_category">未分类</string>
+    <string name="no_torrent_data">暂无种子数据</string>
+    <string name="site_group_header">%1$s（%2$d）</string>
+    <string name="site_unknown">未知</string>
+
     <string name="pause">暂停</string>
     <string name="resume">继续</string>
     <string name="delete">删除</string>
     <string name="cancel">取消</string>
-    <string name="delete_files">删除文件</string>
-    <string name="delete_torrent_title">删除种子？</string>
+    <string name="delete_files">同时删除文件</string>
+    <string name="delete_torrent_title">删除种子</string>
     <string name="delete_torrent_desc">请选择是否同时删除已下载文件。</string>
 
-    <string name="site_group_header">%1$s（%2$d）</string>
-    <string name="site_fmt">站点：%1$s</string>
-    <string name="size_downloaded_fmt">大小：%1$s  已下载：%2$s</string>
-    <string name="up_down_fmt">上传 %1$s   下载 %2$s</string>
-    <string name="seed_leech_complete_fmt">做种/下载：%1$d/%2$d   完成/未完成：%3$d/%4$d</string>
+    <string name="torrent_detail_not_found">未找到种子详情。</string>
+    <string name="torrent_size_fmt">种子大小：%1$s</string>
+    <string name="torrent_uploaded_downloaded_fmt">上传量：%1$s ｜ 下载量：%2$s</string>
+    <string name="torrent_speed_fmt">上传速度：%1$s ｜ 下载速度：%2$s</string>
+    <string name="torrent_category_fmt">分类：%1$s</string>
+    <string name="torrent_save_path_fmt">保存路径：%1$s</string>
+    <string name="torrent_ratio_fmt">分享率：%1$s</string>
+    <string name="torrent_cross_seed_chip_fmt">辅种%1$d</string>
+    <string name="torrent_seed_count_fmt">🌱 种子数：%1$d（%2$d）</string>
+    <string name="torrent_peer_count_fmt">👤 用户数：%1$d（%2$d）</string>
     <string name="added_fmt">添加时间：%1$s</string>
     <string name="last_activity_fmt">最近活动：%1$s</string>
+    <string name="recent_activity_fmt">最近活跃 %1$s</string>
+
+    <string name="cross_seed_detail_title">辅种明细</string>
+    <string name="cross_seed_detail_source_fmt">当前种子：%1$s</string>
+    <string name="cross_seed_detail_count_fmt">同组种子：%1$d</string>
+    <string name="cross_seed_detail_site_fmt">站点：%1$s</string>
+
+    <string name="menu_open_drawer">打开菜单</string>
+    <string name="menu_manage_servers">服务器管理</string>
+    <string name="menu_sort">排序</string>
+    <string name="menu_search">搜索</string>
+    <string name="menu_collapse">收起</string>
+    <string name="menu_add_torrent">添加种子</string>
+    <string name="sort_descending">降序</string>
+    <string name="sort_ascending">升序</string>
+    <string name="sort_added_time">添加时间</string>
+    <string name="sort_upload_speed">上传速度</string>
+    <string name="sort_download_speed">下载速度</string>
+    <string name="sort_share_ratio">分享比率</string>
+    <string name="sort_total_uploaded">总计上传</string>
+    <string name="sort_total_downloaded">总计下载</string>
+    <string name="sort_torrent_size">种子大小</string>
+    <string name="sort_activity_time">活动时间</string>
+    <string name="sort_seeders">做种人数</string>
+    <string name="sort_leechers">下载人数</string>
+    <string name="sort_cross_seed_count">辅种数量</string>
+
+    <string name="search_torrent_label">搜索种子</string>
+    <string name="search_torrent_placeholder">名称 / 标签 / 分类 / Hash / 路径</string>
+
+    <string name="add_torrent_title">添加种子</string>
+    <string name="torrent_links_title">种子链接</string>
+    <string name="torrent_links_hint">添加多个时请换行</string>
+    <string name="torrent_files_title">种子文件</string>
+    <string name="torrent_files_hint">点击右侧 + 按钮添加 .torrent 文件</string>
+    <string name="add_category_label">添加分类</string>
+    <string name="leave_empty_hint">不设置则留空</string>
+    <string name="add_tags_label">添加标签</string>
+    <string name="tags_split_hint">多个标签用逗号分隔</string>
+    <string name="save_path_manual_label">保存路径（可手动输入）</string>
+    <string name="pause_after_add">添加后暂停</string>
+    <string name="upload_limit_kb_label">上传限速 KB/s</string>
+    <string name="download_limit_kb_label">下载限速 KB/s</string>
+    <string name="auto_torrent_management">自动种子管理</string>
+    <string name="skip_hash_check">跳过哈希校验</string>
+    <string name="sequential_download">按顺序下载</string>
+    <string name="first_last_piece_prio">先下载首尾文件块</string>
+    <string name="add">添加</string>
+
+    <string name="server_manage_title">服务器管理</string>
+    <string name="no_saved_servers">暂无已保存服务器</string>
+    <string name="server_current">当前</string>
+    <string name="server_switch">切换</string>
+    <string name="add_server_title">新增服务器</string>
+    <string name="server_name_optional_label">服务器名称（可选）</string>
+    <string name="save_and_connect">保存并连接</string>
+
+    <string name="detail_section_name">名称</string>
+    <string name="detail_new_name_label">新名称</string>
+    <string name="detail_action_change">更改</string>
+    <string name="detail_section_path">路径</string>
+    <string name="detail_set_path_hint">手动修改路径后，会自动关闭“自动种子管理”</string>
+    <string name="detail_save_path_label">保存路径</string>
+    <string name="detail_section_category">分类</string>
+    <string name="detail_category_label">分类</string>
+    <string name="detail_section_tags">标签</string>
+    <string name="detail_tags_label">标签</string>
+    <string name="detail_section_speed_limit">种子限速</string>
+    <string name="detail_download_kb_label">下载 KB/s</string>
+    <string name="detail_upload_kb_label">上传 KB/s</string>
+    <string name="detail_action_apply">应用</string>
+    <string name="detail_section_ratio">分享比率</string>
+    <string name="detail_ratio_label">比率</string>
+
+    <string name="loading">加载中…</string>
+    <string name="no_tracker_info">暂无 Tracker 信息</string>
+    <string name="loading_files">加载文件中…</string>
+    <string name="no_file_details">暂无文件详情</string>
+
+    <string name="tab_info">信息</string>
+    <string name="tab_trackers">服务器</string>
+    <string name="tab_peers">用户</string>
+    <string name="tab_files">文件</string>
+
+    <string name="tracker_message_ok">正常工作</string>
+    <string name="tracker_status_disabled">禁用</string>
+    <string name="tracker_status_not_contacted">未联系</string>
+    <string name="tracker_status_working">工作中</string>
+    <string name="tracker_status_updating">更新中</string>
+    <string name="tracker_status_not_working">不可用</string>
+    <string name="tracker_stats_fmt">P:%1$d | S:%2$d | L:%3$d</string>
+
+    <string name="upload">上传</string>
+    <string name="download">下载</string>
+    <string name="limit_value_fmt">限速 %1$s</string>
+    <string name="total_value_fmt">累计 %1$s</string>
+    <string name="limit_unlimited">不限</string>
 </resources>

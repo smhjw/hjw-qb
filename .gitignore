@@ -1,0 +1,18 @@
+# Android / Gradle
+.gradle/
+build/
+*/build/
+.idea/
+*.iml
+
+# Local machine config
+local.properties
+.DS_Store
+Thumbs.db
+
+# Local assistant/work dirs
+.cowork-temp/
+.gradle-user/
+
+# Local offline toolchain cache (do not commit)
+tools/

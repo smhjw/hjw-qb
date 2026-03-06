@@ -27,8 +27,23 @@ class SecureCredentialStore(context: Context) {
         return prefs.getString(KEY_PASSWORD, "").orEmpty()
     }
 
+    fun savePasswordForProfile(profileId: String, password: String) {
+        if (profileId.isBlank()) return
+        prefs.edit().putString(profilePasswordKey(profileId), password).apply()
+    }
+
+    fun getPasswordForProfile(profileId: String): String {
+        if (profileId.isBlank()) return ""
+        return prefs.getString(profilePasswordKey(profileId), "").orEmpty()
+    }
+
+    private fun profilePasswordKey(profileId: String): String {
+        return "${KEY_PASSWORD_PREFIX}${profileId.trim()}"
+    }
+
     companion object {
         private const val PREF_FILE_NAME = "qb_secure_credentials"
         private const val KEY_PASSWORD = "password"
+        private const val KEY_PASSWORD_PREFIX = "password_profile_"
     }
 }

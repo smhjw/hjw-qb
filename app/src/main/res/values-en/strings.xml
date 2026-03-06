@@ -1,0 +1,204 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">qbremote</string>
+
+    <string name="menu_settings">Settings</string>
+    <string name="menu_theme">Theme</string>
+    <string name="theme_dark">Dark Theme</string>
+    <string name="theme_light">Light Theme</string>
+    <string name="back">Back</string>
+    <string name="go_to_settings">Go to settings</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_show_speed_totals">Show total upload/download</string>
+    <string name="settings_enable_server_grouping">Group by site</string>
+    <string name="settings_show_chart_panel">Show chart panel</string>
+    <string name="settings_show_site_name">Show site name in chart</string>
+    <string name="settings_chart_sort_mode">Chart sort mode</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_zh_cn">Chinese (Simplified)</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_save">Save</string>
+    <string name="settings_language_apply_hint">Select a language, then tap "Save" to apply immediately</string>
+    <string name="settings_delete_when_no_seeders">Preselect delete files when no seeders</string>
+    <string name="settings_delete_by_default">Preselect delete files on delete</string>
+    <string name="done">Done</string>
+
+    <string name="connect_first_hint">Connect to a qBittorrent server first.</string>
+    <string name="connection_title">Connection Settings</string>
+    <string name="connection_host_label">Host / IP</string>
+    <string name="connection_host_hint">e.g. 192.168.1.12 or https://qb.example.com</string>
+    <string name="connection_port_label">Port</string>
+    <string name="connection_refresh_label">Refresh interval (sec)</string>
+    <string name="connection_username_label">Username</string>
+    <string name="connection_password_label">Password</string>
+    <string name="connection_https_label">HTTPS</string>
+    <string name="connect">Connect</string>
+    <string name="connecting">Connecting…</string>
+
+    <string name="global_transfer_title">Global Transfer</string>
+    <string name="refresh">Refresh</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="global_down_fmt">Download speed: %1$s</string>
+    <string name="global_up_fmt">Upload speed: %1$s</string>
+    <string name="global_total_down_fmt">Total download: %1$s</string>
+    <string name="global_total_up_fmt">Total upload: %1$s</string>
+    <string name="global_dht_torrents_fmt">DHT nodes: %1$d | Torrents: %2$d</string>
+    <string name="server_version_fmt">Version %1$s</string>
+
+    <string name="chart_panel_title_fmt">Chart panel (%1$s)</string>
+    <string name="chart_no_data">No chart data.</string>
+    <string name="chart_sort_total_speed">Total speed</string>
+    <string name="chart_sort_download_speed">Download speed</string>
+    <string name="chart_sort_upload_speed">Upload speed</string>
+    <string name="chart_sort_torrent_count">Torrent count</string>
+    <string name="chart_metric_total_fmt">Total speed: %1$s</string>
+    <string name="chart_metric_down_fmt">Download: %1$s</string>
+    <string name="chart_metric_up_fmt">Upload: %1$s</string>
+    <string name="chart_metric_torrents_fmt">Torrents: %1$d</string>
+
+    <string name="status_uploading">Uploading</string>
+    <string name="status_downloading">Downloading</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_error">Error</string>
+    <string name="status_checking">Checking</string>
+    <string name="status_waiting">Queued</string>
+    <string name="status_total_torrents">Total</string>
+
+    <string name="state_downloading">Downloading</string>
+    <string name="state_seeding">Seeding</string>
+    <string name="state_paused">Paused</string>
+    <string name="state_error">Error</string>
+    <string name="state_queued">Queued</string>
+    <string name="state_metadata">Metadata</string>
+    <string name="state_checking">Checking</string>
+    <string name="state_preparing">Preparing</string>
+    <string name="state_stopped">Stopped</string>
+    <string name="state_forced">Forced</string>
+    <string name="state_unknown">Unknown</string>
+
+    <string name="no_tags">No tags</string>
+    <string name="no_category">No category</string>
+    <string name="no_torrent_data">No torrent data</string>
+    <string name="site_group_header">%1$s (%2$d)</string>
+    <string name="site_unknown">Unknown</string>
+
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete_files">Delete files as well</string>
+    <string name="delete_torrent_title">Delete torrent</string>
+    <string name="delete_torrent_desc">Delete torrent and optionally local files.</string>
+
+    <string name="torrent_detail_not_found">Torrent details not found.</string>
+    <string name="torrent_size_fmt">Size: %1$s</string>
+    <string name="torrent_uploaded_downloaded_fmt">Uploaded: %1$s | Downloaded: %2$s</string>
+    <string name="torrent_speed_fmt">Upload speed: %1$s | Download speed: %2$s</string>
+    <string name="torrent_category_fmt">Category: %1$s</string>
+    <string name="torrent_save_path_fmt">Save path: %1$s</string>
+    <string name="torrent_ratio_fmt">Ratio: %1$s</string>
+    <string name="torrent_cross_seed_chip_fmt">Cross-seed %1$d</string>
+    <string name="torrent_seed_count_fmt">Seeds: %1$d (%2$d)</string>
+    <string name="torrent_peer_count_fmt">Peers: %1$d (%2$d)</string>
+    <string name="added_fmt">Added: %1$s</string>
+    <string name="last_activity_fmt">Last active: %1$s</string>
+    <string name="recent_activity_fmt">Active %1$s ago</string>
+
+    <string name="cross_seed_detail_title">Cross-seed details</string>
+    <string name="cross_seed_detail_source_fmt">Source: %1$s</string>
+    <string name="cross_seed_detail_count_fmt">In group: %1$d</string>
+    <string name="cross_seed_detail_site_fmt">Site: %1$s</string>
+
+    <string name="menu_open_drawer">Open menu</string>
+    <string name="menu_manage_servers">Manage servers</string>
+    <string name="menu_sort">Sort</string>
+    <string name="menu_search">Search</string>
+    <string name="menu_collapse">Collapse</string>
+    <string name="menu_add_torrent">Add torrent</string>
+    <string name="sort_descending">Descending</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_added_time">Added time</string>
+    <string name="sort_upload_speed">Upload speed</string>
+    <string name="sort_download_speed">Download speed</string>
+    <string name="sort_share_ratio">Share ratio</string>
+    <string name="sort_total_uploaded">Total uploaded</string>
+    <string name="sort_total_downloaded">Total downloaded</string>
+    <string name="sort_torrent_size">Torrent size</string>
+    <string name="sort_activity_time">Activity time</string>
+    <string name="sort_seeders">Seeders</string>
+    <string name="sort_leechers">Leechers</string>
+    <string name="sort_cross_seed_count">Cross-seed count</string>
+
+    <string name="search_torrent_label">Search torrents</string>
+    <string name="search_torrent_placeholder">Name / Tag / Category / Hash / Path</string>
+
+    <string name="add_torrent_title">Add Torrent</string>
+    <string name="torrent_links_title">Torrent links</string>
+    <string name="torrent_links_hint">Use a new line per link</string>
+    <string name="torrent_files_title">Torrent files</string>
+    <string name="torrent_files_hint">Tap + to add .torrent files</string>
+    <string name="add_category_label">Category</string>
+    <string name="leave_empty_hint">Leave empty if unused</string>
+    <string name="add_tags_label">Tags</string>
+    <string name="tags_split_hint">Separate multiple tags by comma</string>
+    <string name="save_path_manual_label">Save path (manual)</string>
+    <string name="pause_after_add">Pause after adding</string>
+    <string name="upload_limit_kb_label">Upload limit KB/s</string>
+    <string name="download_limit_kb_label">Download limit KB/s</string>
+    <string name="auto_torrent_management">Auto torrent management</string>
+    <string name="skip_hash_check">Skip hash check</string>
+    <string name="sequential_download">Sequential download</string>
+    <string name="first_last_piece_prio">Prioritize first/last pieces</string>
+    <string name="add">Add</string>
+
+    <string name="server_manage_title">Server Management</string>
+    <string name="no_saved_servers">No saved servers</string>
+    <string name="server_current">Current</string>
+    <string name="server_switch">Switch</string>
+    <string name="add_server_title">Add server</string>
+    <string name="server_name_optional_label">Server name (optional)</string>
+    <string name="save_and_connect">Save and connect</string>
+
+    <string name="detail_section_name">Name</string>
+    <string name="detail_new_name_label">New name</string>
+    <string name="detail_action_change">Change</string>
+    <string name="detail_section_path">Path</string>
+    <string name="detail_set_path_hint">Changing path will disable automatic torrent management.</string>
+    <string name="detail_save_path_label">Save path</string>
+    <string name="detail_section_category">Category</string>
+    <string name="detail_category_label">Category</string>
+    <string name="detail_section_tags">Tags</string>
+    <string name="detail_tags_label">Tags</string>
+    <string name="detail_section_speed_limit">Speed limit</string>
+    <string name="detail_download_kb_label">Download KB/s</string>
+    <string name="detail_upload_kb_label">Upload KB/s</string>
+    <string name="detail_action_apply">Apply</string>
+    <string name="detail_section_ratio">Share ratio</string>
+    <string name="detail_ratio_label">Ratio</string>
+
+    <string name="loading">Loading…</string>
+    <string name="no_tracker_info">No tracker info</string>
+    <string name="loading_files">Loading files…</string>
+    <string name="no_file_details">No file details</string>
+
+    <string name="tab_info">Info</string>
+    <string name="tab_trackers">Trackers</string>
+    <string name="tab_peers">Peers</string>
+    <string name="tab_files">Files</string>
+
+    <string name="tracker_message_ok">Working normally</string>
+    <string name="tracker_status_disabled">Disabled</string>
+    <string name="tracker_status_not_contacted">Not contacted</string>
+    <string name="tracker_status_working">Working</string>
+    <string name="tracker_status_updating">Updating</string>
+    <string name="tracker_status_not_working">Not working</string>
+    <string name="tracker_stats_fmt">Peers:%1$d | Seeds:%2$d | Leeches:%3$d</string>
+
+    <string name="upload">Upload</string>
+    <string name="download">Download</string>
+    <string name="limit_value_fmt">Limit %1$s</string>
+    <string name="total_value_fmt">Total %1$s</string>
+    <string name="limit_unlimited">Unlimited</string>
+</resources>
