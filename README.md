@@ -114,6 +114,25 @@ If you want a custom filename:
 Rename-Item "app/build/outputs/apk/debug/app-debug.apk" "qbremote.apk"
 ```
 
+Release AAB for Google Play:
+
+1. Copy `keystore.properties.example` to `keystore.properties` and fill your signing values.
+2. Build:
+
+```powershell
+.\gradlew.bat bundleRelease
+```
+
+Output:
+
+- `app/build/outputs/bundle/release/app-release.aab`
+
+Quick script:
+
+```powershell
+.\scripts\build-release-aab.ps1
+```
+
 ## qBittorrent WebUI Setup
 
 ---
@@ -130,3 +149,10 @@ Rename-Item "app/build/outputs/apk/debug/app-debug.apk" "qbremote.apk"
 - More tracker/peer/file advanced controls
 - Stronger release automation (CI + signed builds)
 - More test coverage (ViewModel and repository layers)
+
+## Google Play Docs
+
+- [Google Play Release Checklist (zh-CN)](docs/google-play/PLAY_RELEASE_CHECKLIST.zh-CN.md)
+- [Data Safety Guide (zh-CN)](docs/google-play/DATA_SAFETY_GUIDE.zh-CN.md)
+- [Privacy Policy (EN)](docs/google-play/PRIVACY_POLICY.md)
+- [Privacy Policy (zh-CN)](docs/google-play/PRIVACY_POLICY.zh-CN.md)

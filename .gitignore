@@ -9,6 +9,10 @@ build/
 local.properties
 .DS_Store
 Thumbs.db
+keystore.properties
+*.jks
+*.keystore
+*.p12
 
 # Local assistant/work dirs
 .cowork-temp/

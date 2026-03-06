@@ -1,7 +1,33 @@
+import org.gradle.api.GradleException
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingProperty(name: String): String? {
+    val fromFile = keystoreProperties.getProperty(name)?.trim().orEmpty()
+    if (fromFile.isNotEmpty()) return fromFile
+    return providers.gradleProperty(name).orNull?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+val releaseStoreFilePath = signingProperty("RELEASE_STORE_FILE")
+val releaseStorePassword = signingProperty("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingProperty("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingProperty("RELEASE_KEY_PASSWORD")
+
+val hasReleaseSigningConfig = !releaseStoreFilePath.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.hjw.qbremote"
@@ -15,9 +41,23 @@ android {
         versionName = "0.1.1"
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigningConfig) {
+                storeFile = file(requireNotNull(releaseStoreFilePath))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -47,6 +87,17 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+val releaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true)
+}
+if (releaseTaskRequested && !hasReleaseSigningConfig) {
+    throw GradleException(
+        "Release signing config is missing. " +
+            "Create keystore.properties from keystore.properties.example " +
+            "or pass RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD."
+    )
 }
 
 dependencies {

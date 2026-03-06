@@ -114,6 +114,25 @@ APK 输出：
 Rename-Item "app/build/outputs/apk/debug/app-debug.apk" "qbremote.apk"
 ```
 
+Google Play 用的 release AAB：
+
+1. 将 `keystore.properties.example` 复制为 `keystore.properties`，并填入你的签名参数
+2. 执行打包：
+
+```powershell
+.\gradlew.bat bundleRelease
+```
+
+输出：
+
+- `app/build/outputs/bundle/release/app-release.aab`
+
+快捷脚本：
+
+```powershell
+.\scripts\build-release-aab.ps1
+```
+
 ## qBittorrent WebUI 设置
 
 1. 打开 `Tools -> Options -> Web UI`
@@ -128,3 +147,10 @@ Rename-Item "app/build/outputs/apk/debug/app-debug.apk" "qbremote.apk"
 - 更多 Tracker/Peer/文件高级控制
 - 更完整的发布自动化（CI + 签名构建）
 - 更高覆盖率的测试（ViewModel 与 Repository 层）
+
+## Google Play 文档
+
+- [Google Play 上架清单](docs/google-play/PLAY_RELEASE_CHECKLIST.zh-CN.md)
+- [Data Safety 填写建议](docs/google-play/DATA_SAFETY_GUIDE.zh-CN.md)
+- [隐私政策（英文）](docs/google-play/PRIVACY_POLICY.md)
+- [隐私政策（简体中文）](docs/google-play/PRIVACY_POLICY.zh-CN.md)
