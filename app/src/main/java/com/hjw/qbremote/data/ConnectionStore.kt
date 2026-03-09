@@ -33,6 +33,7 @@ data class ConnectionSettings(
     val chartSortMode: ChartSortMode = ChartSortMode.TOTAL_SPEED,
     val deleteFilesDefault: Boolean = true,
     val deleteFilesWhenNoSeeders: Boolean = false,
+    val homeTorrentEntryHintDismissed: Boolean = false,
 ) {
     fun baseUrl(): String {
         return baseUrlCandidates().first()
@@ -167,6 +168,7 @@ class ConnectionStore(private val context: Context) {
         val ChartSortMode = stringPreferencesKey("chart_sort_mode")
         val DeleteFilesDefault = booleanPreferencesKey("delete_files_default")
         val DeleteFilesWhenNoSeeders = booleanPreferencesKey("delete_files_when_no_seeders")
+        val HomeTorrentEntryHintDismissed = booleanPreferencesKey("home_torrent_entry_hint_dismissed")
         val ServerProfilesJson = stringPreferencesKey("server_profiles_json")
         val ActiveServerProfileId = stringPreferencesKey("active_server_profile_id")
         val DailyUploadTrackingJson = stringPreferencesKey("daily_upload_tracking_json")
@@ -251,6 +253,7 @@ class ConnectionStore(private val context: Context) {
             target[Keys.ChartSortMode] = settings.chartSortMode.name
             target[Keys.DeleteFilesDefault] = settings.deleteFilesDefault
             target[Keys.DeleteFilesWhenNoSeeders] = settings.deleteFilesWhenNoSeeders
+            target[Keys.HomeTorrentEntryHintDismissed] = settings.homeTorrentEntryHintDismissed
             target.remove(Keys.PasswordLegacy)
             if (resolvedActiveProfileId.isNotBlank()) {
                 target[Keys.ActiveServerProfileId] = resolvedActiveProfileId
@@ -497,6 +500,7 @@ class ConnectionStore(private val context: Context) {
             }.getOrDefault(ChartSortMode.TOTAL_SPEED),
             deleteFilesDefault = this[Keys.DeleteFilesDefault] ?: true,
             deleteFilesWhenNoSeeders = this[Keys.DeleteFilesWhenNoSeeders] ?: false,
+            homeTorrentEntryHintDismissed = this[Keys.HomeTorrentEntryHintDismissed] ?: false,
         )
     }
 }

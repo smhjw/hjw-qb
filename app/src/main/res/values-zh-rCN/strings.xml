@@ -61,6 +61,9 @@
     <string name="dashboard_daily_tag_upload_title">今日上传量</string>
     <string name="dashboard_daily_tag_upload_title_with_date">当日标签上传占比（%1$s）</string>
     <string name="dashboard_daily_tag_upload_empty">当前自然日暂无上传数据。</string>
+    <string name="dashboard_open_torrents">查看种子</string>
+    <string name="dashboard_open_torrents_hint">点此进入</string>
+    <string name="dismiss_hint">关闭提示</string>
 
     <string name="status_uploading">上传中</string>
     <string name="status_downloading">下载中</string>

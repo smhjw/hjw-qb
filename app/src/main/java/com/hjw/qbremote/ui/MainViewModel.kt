@@ -159,6 +159,14 @@ class MainViewModel(
         it.copy(deleteFilesWhenNoSeeders = value)
     }
 
+    fun dismissHomeTorrentEntryHint() = updateAndPersistSettings {
+        if (it.homeTorrentEntryHintDismissed) {
+            it
+        } else {
+            it.copy(homeTorrentEntryHintDismissed = true)
+        }
+    }
+
     fun updateRefreshScene(scene: RefreshScene) {
         _uiState.update { current ->
             if (current.refreshScene == scene) current else current.copy(refreshScene = scene)

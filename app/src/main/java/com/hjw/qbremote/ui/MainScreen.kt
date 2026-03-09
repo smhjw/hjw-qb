@@ -309,6 +309,13 @@ fun MainScreen(viewModel: MainViewModel) {
         currentPage = AppPage.TORRENT_LIST
     }
 
+    fun openTorrentListFromDashboard() {
+        if (!state.settings.homeTorrentEntryHintDismissed) {
+            viewModel.dismissHomeTorrentEntryHint()
+        }
+        openTorrentList()
+    }
+
     fun openTorrentDetail(torrent: TorrentInfo) {
         selectedTorrentIdentity = torrentIdentityKey(torrent)
         if (currentPage != AppPage.TORRENT_DETAIL) {
@@ -668,9 +675,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                         torrents = state.torrents,
                                         torrentCount = state.torrents.size,
                                         showTotals = state.settings.showSpeedTotals,
-                                        isRefreshing = state.isManualRefreshing,
-                                        onRefresh = { viewModel.refresh(manual = true) },
-                                        onOpenTorrentList = ::openTorrentList,
+                                        showEntryHint = !state.settings.homeTorrentEntryHintDismissed,
+                                        onDismissEntryHint = viewModel::dismissHomeTorrentEntryHint,
+                                        onOpenTorrentList = ::openTorrentListFromDashboard,
                                     )
                                 }
                                 if (state.settings.showChartPanel) {
@@ -2006,8 +2013,8 @@ private fun ServerOverviewCard(
     torrents: List<TorrentInfo>,
     torrentCount: Int,
     showTotals: Boolean,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
+    showEntryHint: Boolean,
+    onDismissEntryHint: () -> Unit,
     onOpenTorrentList: () -> Unit,
 ) {
     val stateSummary = remember(torrents) { buildDashboardStateSummary(torrents) }
@@ -2115,13 +2122,24 @@ private fun ServerOverviewCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TextButton(onClick = onRefresh) {
+                TextButton(onClick = onOpenTorrentList) {
                     Text(
-                        if (isRefreshing) {
-                            stringResource(R.string.refreshing)
-                        } else {
-                            stringResource(R.string.refresh)
-                        }
+                        text = stringResource(R.string.dashboard_open_torrents),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            if (showEntryHint) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    DashboardEntryHintBubble(
+                        text = stringResource(R.string.dashboard_open_torrents_hint),
+                        dismissDescription = stringResource(R.string.dismiss_hint),
+                        onDismiss = onDismissEntryHint,
                     )
                 }
             }
@@ -2217,6 +2235,46 @@ private fun TagChartPanelCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DashboardEntryHintBubble(
+    text: String,
+    dismissDescription: String,
+    onDismiss: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "×",
+            modifier = Modifier
+                .semantics { contentDescription = dismissDescription }
+                .clickable(onClick = onDismiss)
+                .padding(horizontal = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

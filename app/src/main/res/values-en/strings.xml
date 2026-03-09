@@ -61,6 +61,9 @@
     <string name="dashboard_daily_tag_upload_title">Today\'s Upload</string>
     <string name="dashboard_daily_tag_upload_title_with_date">Today\'s Upload Share by Tag (%1$s)</string>
     <string name="dashboard_daily_tag_upload_empty">No upload data yet for the current day.</string>
+    <string name="dashboard_open_torrents">Torrents</string>
+    <string name="dashboard_open_torrents_hint">Tap here</string>
+    <string name="dismiss_hint">Dismiss hint</string>
 
     <string name="status_uploading">Uploading</string>
     <string name="status_downloading">Downloading</string>

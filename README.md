@@ -7,6 +7,7 @@ Android app for remotely managing qBittorrent through the WebUI API.
 - Connect to qBittorrent with host/IP or full `http(s)://` URL
 - Save and switch between multiple server profiles
 - View dashboard stats for upload speed, download speed, total traffic, and status counts
+- Open the torrent list from a clearer homepage entry with a one-time hint
 - Browse a unified torrent list with search and sorting
 - Pause, resume, and delete torrents
 - Open torrent detail tabs for info, trackers, peers, and files
@@ -17,4 +18,8 @@ Android app for remotely managing qBittorrent through the WebUI API.
 
 ## APK
 
-- Latest APK: `release/qbitremote-v0.1.4.apk`
+- Latest APK: `release/qbitremote-v0.1.5.apk`
+
+## License
+
+- Non-commercial use only. See `LICENSE`.
