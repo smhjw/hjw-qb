@@ -86,6 +86,12 @@ interface QbApi {
     @GET("api/v2/torrents/tags")
     suspend fun torrentTagsRaw(): String
 
+    @GET("api/v2/sync/torrentPeers")
+    suspend fun torrentPeers(
+        @Query("hash") hash: String,
+        @Query("rid") rid: Int = 0,
+    ): String
+
     @FormUrlEncoded
     @POST("api/v2/torrents/rename")
     suspend fun renameTorrent(

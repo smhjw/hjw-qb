@@ -1,18 +1,22 @@
 package com.hjw.qbremote.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.hjw.qbremote.data.AppTheme
 
 private val QbDarkColors = darkColorScheme(
     primary = Color(0xFF29E0D4),
@@ -99,22 +103,100 @@ private val QbTypography = Typography(
     ),
 )
 
+data class QbThemeState(
+    val appTheme: AppTheme = AppTheme.DARK,
+    val customBackgroundToneIsLight: Boolean = false,
+) {
+    val isCustomTheme: Boolean
+        get() = appTheme == AppTheme.CUSTOM
+
+    val usesDarkPalette: Boolean
+        get() = when (appTheme) {
+            AppTheme.DARK -> true
+            AppTheme.LIGHT -> false
+            AppTheme.CUSTOM -> !customBackgroundToneIsLight
+        }
+}
+
+val LocalQbThemeState = staticCompositionLocalOf { QbThemeState() }
+
 @Composable
 fun QBRemoteTheme(
-    darkTheme: Boolean = true,
+    appTheme: AppTheme = AppTheme.DARK,
+    customBackgroundToneIsLight: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) QbDarkColors else QbLightColors
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = QbTypography,
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground,
+    val themeState = QbThemeState(
+        appTheme = appTheme,
+        customBackgroundToneIsLight = customBackgroundToneIsLight,
+    )
+    val baseScheme = if (themeState.usesDarkPalette) QbDarkColors else QbLightColors
+    val colorScheme = if (themeState.isCustomTheme) {
+        glassColorScheme(
+            base = baseScheme,
+            useLightGlass = customBackgroundToneIsLight,
+        )
+    } else {
+        baseScheme
+    }
+
+    CompositionLocalProvider(LocalQbThemeState provides themeState) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = QbTypography,
         ) {
-            content()
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = if (themeState.isCustomTheme) {
+                    Color.Transparent
+                } else {
+                    MaterialTheme.colorScheme.background
+                },
+                contentColor = MaterialTheme.colorScheme.onBackground,
+            ) {
+                content()
+            }
         }
+    }
+}
+
+private fun glassColorScheme(
+    base: ColorScheme,
+    useLightGlass: Boolean,
+): ColorScheme {
+    return if (useLightGlass) {
+        base.copy(
+            background = Color.Transparent,
+            surface = Color(0x73FFFFFF),
+            surfaceVariant = Color(0x5EFFFFFF),
+            surfaceContainerLowest = Color(0x40FFFFFF),
+            surfaceContainerLow = Color(0x54FFFFFF),
+            surfaceContainer = Color(0x66FFFFFF),
+            surfaceContainerHigh = Color(0x80FFFFFF),
+            surfaceContainerHighest = Color(0x94FFFFFF),
+            surfaceBright = Color(0xA3FFFFFF),
+            surfaceDim = Color(0x52FFFFFF),
+            primaryContainer = Color(0x6BFFFFFF),
+            secondaryContainer = Color(0x62FFFFFF),
+            tertiaryContainer = Color(0x58FFFFFF),
+            outline = Color(0x82FFFFFF),
+        )
+    } else {
+        base.copy(
+            background = Color.Transparent,
+            surface = Color(0x66070D16),
+            surfaceVariant = Color(0x5C1A2535),
+            surfaceContainerLowest = Color(0x40050A12),
+            surfaceContainerLow = Color(0x520A1320),
+            surfaceContainer = Color(0x64101A29),
+            surfaceContainerHigh = Color(0x7A172334),
+            surfaceContainerHighest = Color(0x8F1D2B3E),
+            surfaceBright = Color(0x9924364C),
+            surfaceDim = Color(0x4D09111B),
+            primaryContainer = Color(0x5C113544),
+            secondaryContainer = Color(0x54172D49),
+            tertiaryContainer = Color(0x4A1A3A38),
+            outline = Color(0x8CD8E6F7),
+        )
     }
 }

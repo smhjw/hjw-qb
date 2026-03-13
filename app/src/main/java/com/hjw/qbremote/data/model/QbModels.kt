@@ -42,6 +42,25 @@ data class DashboardData(
     val torrents: List<TorrentInfo>,
 )
 
+data class CountryUploadRecord(
+    val countryCode: String = "",
+    val countryName: String = "",
+    val uploadedBytes: Long = 0,
+)
+
+data class DailyCountryUploadStats(
+    val dateLabel: String = "",
+    val countries: List<CountryUploadRecord> = emptyList(),
+)
+
+data class CountryPeerSnapshot(
+    val key: String = "",
+    val peerAddress: String = "",
+    val countryCode: String = "",
+    val countryName: String = "",
+    val uploadedBytes: Long = 0,
+)
+
 data class TorrentDetailData(
     val properties: TorrentProperties,
     val files: List<TorrentFileInfo>,

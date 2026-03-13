@@ -3,9 +3,19 @@
     <string name="app_name">qbitremote</string>
 
     <string name="menu_settings">设置</string>
+    <string name="menu_servers">服务器</string>
     <string name="menu_theme">主题</string>
     <string name="theme_dark">深色主题</string>
     <string name="theme_light">浅色主题</string>
+    <string name="theme_custom">自定义</string>
+    <string name="theme_custom_upload">选择图片</string>
+    <string name="theme_custom_replace">重新选择</string>
+    <string name="theme_custom_save_apply">保存并应用</string>
+    <string name="theme_custom_saved">当前背景可用</string>
+    <string name="theme_custom_pending">已选择，待应用</string>
+    <string name="theme_custom_none">未选择图片</string>
+    <string name="theme_custom_invalid">背景图不可用，请重新选择</string>
+    <string name="theme_custom_save_failed">保存背景图失败</string>
     <string name="back">返回</string>
     <string name="go_to_settings">前往设置</string>
 
@@ -13,6 +23,9 @@
     <string name="settings_show_speed_totals">显示总上传/下载量</string>
     <string name="settings_enable_server_grouping">按站点分组显示</string>
     <string name="settings_show_chart_panel">显示图表面板</string>
+    <string name="settings_show_country_flow_card">显示今日上传国家分布卡片</string>
+    <string name="settings_show_upload_distribution_card">显示今日上传量卡片</string>
+    <string name="settings_show_category_distribution_card">显示分类占比卡片</string>
     <string name="settings_show_site_name">图表中显示站点名称</string>
     <string name="settings_chart_sort_mode">图表排序方式</string>
     <string name="settings_language">语言</string>
@@ -56,13 +69,19 @@
     <string name="chart_metric_up_fmt">上传：%1$s</string>
     <string name="chart_metric_torrents_fmt">种子数：%1$d</string>
     <string name="chart_other_label">其他</string>
-    <string name="chart_category_count_fmt">%1$d 个种子</string>
+    <plurals name="chart_category_count">
+        <item quantity="other">%1$d 个种子</item>
+    </plurals>
     <string name="dashboard_category_share_title">分类占比</string>
-    <string name="dashboard_daily_tag_upload_title">今日上传量</string>
-    <string name="dashboard_daily_tag_upload_title_with_date">当日标签上传占比（%1$s）</string>
     <string name="dashboard_daily_tag_upload_empty">当前自然日暂无上传数据。</string>
+    <string name="dashboard_upload_title">上传量</string>
+    <string name="dashboard_upload_title_with_date">上传量（%1$s）</string>
     <string name="dashboard_open_torrents">查看种子</string>
     <string name="dashboard_open_torrents_hint">点此进入</string>
+    <string name="dashboard_country_flow_title">今日上传量分布（预估）</string>
+    <string name="dashboard_country_flow_empty">暂无今日国家上传估算数据。</string>
+    <string name="dashboard_country_hide_hint">提示：双击卡片顶部可隐藏</string>
+    <string name="dashboard_country_hidden_snack">已隐藏，可在设置中重新显示</string>
     <string name="dismiss_hint">关闭提示</string>
 
     <string name="status_uploading">上传中</string>
@@ -93,6 +112,7 @@
     <string name="pause">暂停</string>
     <string name="resume">继续</string>
     <string name="delete">删除</string>
+    <string name="hide">隐藏</string>
     <string name="cancel">取消</string>
     <string name="delete_files">同时删除文件</string>
     <string name="delete_torrent_title">删除种子</string>
@@ -161,11 +181,8 @@
 
     <string name="server_manage_title">服务器管理</string>
     <string name="no_saved_servers">暂无已保存服务器</string>
-    <string name="server_current">当前</string>
-    <string name="server_switch">切换</string>
     <string name="add_server_title">新增服务器</string>
     <string name="server_name_optional_label">服务器名称（可选）</string>
-    <string name="save_and_connect">保存并连接</string>
 
     <string name="detail_section_name">名称</string>
     <string name="detail_new_name_label">新名称</string>

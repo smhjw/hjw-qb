@@ -3,7 +3,9 @@ package com.hjw.qbremote
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val connectionStore = ConnectionStore(applicationContext)
         val repository = QbRepository()
 
@@ -46,9 +49,14 @@ class MainActivity : AppCompatActivity() {
                 factory = MainViewModel.factory(connectionStore, repository)
             )
             val uiState by vm.uiState.collectAsStateWithLifecycle()
-            val darkTheme = uiState.settings.appTheme == AppTheme.DARK
+            val darkTheme = when (uiState.settings.appTheme) {
+                AppTheme.DARK -> true
+                AppTheme.LIGHT -> false
+                AppTheme.CUSTOM -> !uiState.settings.customBackgroundToneIsLight
+            }
             QBRemoteTheme(
-                darkTheme = darkTheme,
+                appTheme = uiState.settings.appTheme,
+                customBackgroundToneIsLight = uiState.settings.customBackgroundToneIsLight,
             ) {
                 ConfigureSystemBars(darkTheme = darkTheme)
                 MainScreen(viewModel = vm)
@@ -74,6 +82,9 @@ private fun ConfigureSystemBars(darkTheme: Boolean) {
     SideEffect {
         val activity = view.context.findActivity() as? AppCompatActivity ?: return@SideEffect
         val window = activity.window
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         WindowCompat.getInsetsController(window, view).apply {
             isAppearanceLightStatusBars = !darkTheme
             isAppearanceLightNavigationBars = !darkTheme

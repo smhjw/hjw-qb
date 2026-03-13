@@ -9,6 +9,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.hjw.qbremote.data.model.CountryPeerSnapshot
+import com.hjw.qbremote.data.model.CountryUploadRecord
+import com.hjw.qbremote.data.model.TorrentInfo
+import com.hjw.qbremote.data.model.TransferInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -26,14 +30,22 @@ data class ConnectionSettings(
     val refreshSeconds: Int = 5,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appTheme: AppTheme = AppTheme.DARK,
+    val customBackgroundImagePath: String = "",
+    val customBackgroundToneIsLight: Boolean = false,
     val showSpeedTotals: Boolean = true,
     val enableServerGrouping: Boolean = true,
     val showChartPanel: Boolean = true,
+    val showCountryFlowCard: Boolean = true,
+    val showUploadDistributionCard: Boolean = true,
+    val showCategoryDistributionCard: Boolean = true,
+    val dashboardCardOrder: String = "country_flow,category_share,daily_upload",
     val chartShowSiteName: Boolean = true,
     val chartSortMode: ChartSortMode = ChartSortMode.TOTAL_SPEED,
     val deleteFilesDefault: Boolean = true,
     val deleteFilesWhenNoSeeders: Boolean = false,
     val homeTorrentEntryHintDismissed: Boolean = false,
+    val hasSeenDashboardHideHint: Boolean = false,
+    val hasSeenDashboardHiddenSnack: Boolean = false,
 ) {
     fun baseUrl(): String {
         return baseUrlCandidates().first()
@@ -127,6 +139,35 @@ data class DailyUploadTrackingSnapshot(
     val lastSeenByTorrent: Map<String, Long> = emptyMap(),
 )
 
+data class DailyCountryUploadTrackingSnapshot(
+    val date: String = "",
+    val totalsByCountry: Map<String, Long> = emptyMap(),
+    val peerSnapshots: Map<String, CountryPeerSnapshot> = emptyMap(),
+    val lastSeenByTorrent: Map<String, Long> = emptyMap(),
+    val recentSamples: List<CountryDistributionSample> = emptyList(),
+)
+
+data class CountryDistributionSample(
+    val sampledTotals: Map<String, Long> = emptyMap(),
+    val peerCountsByCountry: Map<String, Long> = emptyMap(),
+)
+
+data class DashboardCacheSnapshot(
+    val transferInfo: TransferInfo = TransferInfo(),
+    val torrents: List<TorrentInfo> = emptyList(),
+    val dailyTagUploadDate: String = "",
+    val dailyTagUploadStats: List<CachedDailyTagUploadStat> = emptyList(),
+    val dailyCountryUploadDate: String = "",
+    val dailyCountryUploadStats: List<CountryUploadRecord> = emptyList(),
+)
+
+data class CachedDailyTagUploadStat(
+    val tag: String = "",
+    val uploadedBytes: Long = 0L,
+    val torrentCount: Int = 0,
+    val isNoTag: Boolean = false,
+)
+
 enum class ChartSortMode {
     TOTAL_SPEED,
     DOWNLOAD_SPEED,
@@ -143,6 +184,7 @@ enum class AppLanguage {
 enum class AppTheme {
     DARK,
     LIGHT,
+    CUSTOM,
 }
 
 class ConnectionStore(private val context: Context) {
@@ -151,6 +193,10 @@ class ConnectionStore(private val context: Context) {
     private val serverProfileListType = object : TypeToken<List<ServerProfile>>() {}.type
     private val dailyUploadTrackingMapType =
         object : TypeToken<Map<String, DailyUploadTrackingSnapshot>>() {}.type
+    private val dailyCountryUploadTrackingMapType =
+        object : TypeToken<Map<String, DailyCountryUploadTrackingSnapshot>>() {}.type
+    private val dashboardCacheMapType =
+        object : TypeToken<Map<String, DashboardCacheSnapshot>>() {}.type
 
     private object Keys {
         val Host = stringPreferencesKey("host")
@@ -161,17 +207,27 @@ class ConnectionStore(private val context: Context) {
         val RefreshSeconds = intPreferencesKey("refresh_seconds")
         val AppLanguage = stringPreferencesKey("app_language")
         val AppTheme = stringPreferencesKey("app_theme")
+        val CustomBackgroundImagePath = stringPreferencesKey("custom_background_image_path")
+        val CustomBackgroundToneIsLight = booleanPreferencesKey("custom_background_tone_is_light")
         val ShowSpeedTotals = booleanPreferencesKey("show_speed_totals")
         val EnableServerGrouping = booleanPreferencesKey("enable_server_grouping")
         val ShowChartPanel = booleanPreferencesKey("show_chart_panel")
+        val ShowCountryFlowCard = booleanPreferencesKey("show_country_flow_card")
+        val ShowUploadDistributionCard = booleanPreferencesKey("show_upload_distribution_card")
+        val ShowCategoryDistributionCard = booleanPreferencesKey("show_category_distribution_card")
+        val DashboardCardOrder = stringPreferencesKey("dashboard_card_order")
         val ChartShowSiteName = booleanPreferencesKey("chart_show_site_name")
         val ChartSortMode = stringPreferencesKey("chart_sort_mode")
         val DeleteFilesDefault = booleanPreferencesKey("delete_files_default")
         val DeleteFilesWhenNoSeeders = booleanPreferencesKey("delete_files_when_no_seeders")
         val HomeTorrentEntryHintDismissed = booleanPreferencesKey("home_torrent_entry_hint_dismissed")
+        val HasSeenDashboardHideHint = booleanPreferencesKey("has_seen_dashboard_hide_hint")
+        val HasSeenDashboardHiddenSnack = booleanPreferencesKey("has_seen_dashboard_hidden_snack")
         val ServerProfilesJson = stringPreferencesKey("server_profiles_json")
         val ActiveServerProfileId = stringPreferencesKey("active_server_profile_id")
         val DailyUploadTrackingJson = stringPreferencesKey("daily_upload_tracking_json")
+        val DailyCountryUploadTrackingJson = stringPreferencesKey("daily_country_upload_tracking_json")
+        val DashboardCacheJson = stringPreferencesKey("dashboard_cache_json")
     }
 
     val settingsFlow: Flow<ConnectionSettings> = context.dataStore.data.map { pref ->
@@ -246,14 +302,22 @@ class ConnectionStore(private val context: Context) {
             target[Keys.RefreshSeconds] = settings.refreshSeconds
             target[Keys.AppLanguage] = settings.appLanguage.name
             target[Keys.AppTheme] = settings.appTheme.name
+            target[Keys.CustomBackgroundImagePath] = settings.customBackgroundImagePath
+            target[Keys.CustomBackgroundToneIsLight] = settings.customBackgroundToneIsLight
             target[Keys.ShowSpeedTotals] = settings.showSpeedTotals
             target[Keys.EnableServerGrouping] = settings.enableServerGrouping
             target[Keys.ShowChartPanel] = settings.showChartPanel
+            target[Keys.ShowCountryFlowCard] = settings.showCountryFlowCard
+            target[Keys.ShowUploadDistributionCard] = settings.showUploadDistributionCard
+            target[Keys.ShowCategoryDistributionCard] = settings.showCategoryDistributionCard
+            target[Keys.DashboardCardOrder] = settings.dashboardCardOrder
             target[Keys.ChartShowSiteName] = settings.chartShowSiteName
             target[Keys.ChartSortMode] = settings.chartSortMode.name
             target[Keys.DeleteFilesDefault] = settings.deleteFilesDefault
             target[Keys.DeleteFilesWhenNoSeeders] = settings.deleteFilesWhenNoSeeders
             target[Keys.HomeTorrentEntryHintDismissed] = settings.homeTorrentEntryHintDismissed
+            target[Keys.HasSeenDashboardHideHint] = settings.hasSeenDashboardHideHint
+            target[Keys.HasSeenDashboardHiddenSnack] = settings.hasSeenDashboardHiddenSnack
             target.remove(Keys.PasswordLegacy)
             if (resolvedActiveProfileId.isNotBlank()) {
                 target[Keys.ActiveServerProfileId] = resolvedActiveProfileId
@@ -343,6 +407,46 @@ class ConnectionStore(private val context: Context) {
         }
     }
 
+    suspend fun loadDailyCountryUploadTrackingSnapshot(scopeKey: String): DailyCountryUploadTrackingSnapshot? {
+        if (scopeKey.isBlank()) return null
+        val pref = context.dataStore.data.first()
+        val snapshots = parseDailyCountryUploadTrackingSnapshots(pref[Keys.DailyCountryUploadTrackingJson])
+        return snapshots[scopeKey]
+    }
+
+    suspend fun saveDailyCountryUploadTrackingSnapshot(
+        scopeKey: String,
+        snapshot: DailyCountryUploadTrackingSnapshot,
+    ) {
+        if (scopeKey.isBlank()) return
+        context.dataStore.edit { target ->
+            val snapshots = parseDailyCountryUploadTrackingSnapshots(
+                target[Keys.DailyCountryUploadTrackingJson]
+            ).toMutableMap()
+            snapshots[scopeKey] = snapshot.normalized()
+            target[Keys.DailyCountryUploadTrackingJson] = gson.toJson(snapshots)
+        }
+    }
+
+    suspend fun loadDashboardCacheSnapshot(scopeKey: String): DashboardCacheSnapshot? {
+        if (scopeKey.isBlank()) return null
+        val pref = context.dataStore.data.first()
+        val snapshots = parseDashboardCacheSnapshots(pref[Keys.DashboardCacheJson])
+        return snapshots[scopeKey]
+    }
+
+    suspend fun saveDashboardCacheSnapshot(
+        scopeKey: String,
+        snapshot: DashboardCacheSnapshot,
+    ) {
+        if (scopeKey.isBlank()) return
+        context.dataStore.edit { target ->
+            val snapshots = parseDashboardCacheSnapshots(target[Keys.DashboardCacheJson]).toMutableMap()
+            snapshots[scopeKey] = snapshot.normalized()
+            target[Keys.DashboardCacheJson] = gson.toJson(snapshots)
+        }
+    }
+
     suspend fun migrateLegacyPasswordIfNeeded() {
         val prefBefore = context.dataStore.data.first()
         val legacy = prefBefore[Keys.PasswordLegacy].orEmpty()
@@ -427,6 +531,30 @@ class ConnectionStore(private val context: Context) {
         }.getOrDefault(emptyMap())
     }
 
+    private fun parseDailyCountryUploadTrackingSnapshots(raw: String?): Map<String, DailyCountryUploadTrackingSnapshot> {
+        val text = raw.orEmpty().trim()
+        if (text.isBlank()) return emptyMap()
+        return runCatching {
+            gson.fromJson<Map<String, DailyCountryUploadTrackingSnapshot>>(text, dailyCountryUploadTrackingMapType)
+                .orEmpty()
+                .mapKeys { it.key.trim() }
+                .filterKeys { it.isNotBlank() }
+                .mapValues { (_, snapshot) -> snapshot.normalized() }
+        }.getOrDefault(emptyMap())
+    }
+
+    private fun parseDashboardCacheSnapshots(raw: String?): Map<String, DashboardCacheSnapshot> {
+        val text = raw.orEmpty().trim()
+        if (text.isBlank()) return emptyMap()
+        return runCatching {
+            gson.fromJson<Map<String, DashboardCacheSnapshot>>(text, dashboardCacheMapType)
+                .orEmpty()
+                .mapKeys { it.key.trim() }
+                .filterKeys { it.isNotBlank() }
+                .mapValues { (_, snapshot) -> snapshot.normalized() }
+        }.getOrDefault(emptyMap())
+    }
+
     private fun resolvePassword(profileId: String): String {
         return if (profileId.isBlank()) {
             secureCredentials.getPassword()
@@ -462,6 +590,57 @@ class ConnectionStore(private val context: Context) {
         )
     }
 
+    private fun DailyCountryUploadTrackingSnapshot.normalized(): DailyCountryUploadTrackingSnapshot {
+        return copy(
+            date = date.trim(),
+            totalsByCountry = totalsByCountry
+                .mapKeys { it.key.trim().uppercase() }
+                .filterKeys { it.isNotBlank() }
+                .mapValues { (_, value) -> value.coerceAtLeast(0L) },
+            peerSnapshots = peerSnapshots
+                .filterKeys { it.isNotBlank() }
+                .mapValues { (_, snapshot) ->
+                    snapshot.copy(
+                        key = snapshot.key.trim(),
+                        peerAddress = snapshot.peerAddress.trim(),
+                        countryCode = snapshot.countryCode.trim().uppercase(),
+                        countryName = snapshot.countryName.trim(),
+                        uploadedBytes = snapshot.uploadedBytes.coerceAtLeast(0L),
+                    )
+                },
+            lastSeenByTorrent = lastSeenByTorrent
+                .filterKeys { it.isNotBlank() }
+                .mapValues { (_, value) -> value.coerceAtLeast(0L) },
+            recentSamples = recentSamples.map { sample ->
+                sample.copy(
+                    sampledTotals = sample.sampledTotals
+                        .mapKeys { it.key.trim().uppercase() }
+                        .filterKeys { it.isNotBlank() }
+                        .mapValues { (_, value) -> value.coerceAtLeast(0L) },
+                    peerCountsByCountry = sample.peerCountsByCountry
+                        .mapKeys { it.key.trim().uppercase() }
+                        .filterKeys { it.isNotBlank() }
+                        .mapValues { (_, value) -> value.coerceAtLeast(0L) },
+                )
+            },
+        )
+    }
+
+    private fun DashboardCacheSnapshot.normalized(): DashboardCacheSnapshot {
+        return copy(
+            dailyTagUploadDate = dailyTagUploadDate.trim(),
+            dailyTagUploadStats = dailyTagUploadStats.map { it.copy(tag = it.tag.trim()) },
+            dailyCountryUploadDate = dailyCountryUploadDate.trim(),
+            dailyCountryUploadStats = dailyCountryUploadStats.map { record ->
+                record.copy(
+                    countryCode = record.countryCode.trim().uppercase(),
+                    countryName = record.countryName.trim(),
+                    uploadedBytes = record.uploadedBytes.coerceAtLeast(0L),
+                )
+            },
+        )
+    }
+
     private fun ConnectionSettings.toServerProfile(
         id: String,
         name: String,
@@ -491,9 +670,15 @@ class ConnectionStore(private val context: Context) {
             appTheme = runCatching {
                 enumValueOf<AppTheme>(this[Keys.AppTheme].orEmpty())
             }.getOrDefault(AppTheme.DARK),
+            customBackgroundImagePath = this[Keys.CustomBackgroundImagePath].orEmpty(),
+            customBackgroundToneIsLight = this[Keys.CustomBackgroundToneIsLight] ?: false,
             showSpeedTotals = this[Keys.ShowSpeedTotals] ?: true,
             enableServerGrouping = this[Keys.EnableServerGrouping] ?: true,
             showChartPanel = this[Keys.ShowChartPanel] ?: true,
+            showCountryFlowCard = this[Keys.ShowCountryFlowCard] ?: true,
+            showUploadDistributionCard = this[Keys.ShowUploadDistributionCard] ?: true,
+            showCategoryDistributionCard = this[Keys.ShowCategoryDistributionCard] ?: true,
+            dashboardCardOrder = this[Keys.DashboardCardOrder] ?: "country_flow,category_share,daily_upload",
             chartShowSiteName = this[Keys.ChartShowSiteName] ?: true,
             chartSortMode = runCatching {
                 enumValueOf<ChartSortMode>(this[Keys.ChartSortMode].orEmpty())
@@ -501,6 +686,8 @@ class ConnectionStore(private val context: Context) {
             deleteFilesDefault = this[Keys.DeleteFilesDefault] ?: true,
             deleteFilesWhenNoSeeders = this[Keys.DeleteFilesWhenNoSeeders] ?: false,
             homeTorrentEntryHintDismissed = this[Keys.HomeTorrentEntryHintDismissed] ?: false,
+            hasSeenDashboardHideHint = this[Keys.HasSeenDashboardHideHint] ?: false,
+            hasSeenDashboardHiddenSnack = this[Keys.HasSeenDashboardHiddenSnack] ?: false,
         )
     }
 }

@@ -2,8 +2,11 @@
 
 import com.hjw.qbremote.data.model.DashboardData
 import com.hjw.qbremote.data.model.AddTorrentRequest
+import com.hjw.qbremote.data.model.CountryPeerSnapshot
 import com.hjw.qbremote.data.model.TorrentDetailData
 import com.hjw.qbremote.data.model.TorrentInfo
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -23,6 +26,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class QbRepository {
@@ -133,6 +137,19 @@ class QbRepository {
     suspend fun fetchTagOptions(): Result<List<String>> = runCatching {
         val raw = executeWithRetry { liveApi -> liveApi.torrentTagsRaw() }
         parseTagOptions(raw)
+    }
+
+    suspend fun fetchCountryPeerSnapshots(hashes: List<String>): Result<List<CountryPeerSnapshot>> = runCatching {
+        val snapshots = mutableListOf<CountryPeerSnapshot>()
+        hashes
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .forEach { hash ->
+                val raw = executeWithRetry { liveApi -> liveApi.torrentPeers(hash = hash) }
+                snapshots += parseCountryPeerSnapshots(hash = hash, raw = raw)
+            }
+        snapshots
     }
 
     suspend fun renameTorrent(hash: String, name: String): Result<Unit> = runCatching {
@@ -604,6 +621,71 @@ class QbRepository {
             .filter { it.isNotBlank() }
             .distinct()
             .sorted()
+    }
+
+    private fun parseCountryPeerSnapshots(
+        hash: String,
+        raw: String,
+    ): List<CountryPeerSnapshot> {
+        val peersObject = runCatching {
+            JsonParser.parseString(raw)
+                .asJsonObject
+                .getAsJsonObject("peers")
+        }.getOrNull() ?: return emptyList()
+
+        return peersObject.entrySet().mapNotNull { (peerId, value) ->
+            val peer = value.asJsonObjectOrNull() ?: return@mapNotNull null
+            val peerAddress = buildPeerAddress(peer, peerId)
+            val countryCode = peer.readString("country_code", "countryCode", "country")
+                .uppercase(Locale.US)
+                .takeIf { it.length == 2 }
+                ?: return@mapNotNull null
+            val uploadedBytes = peer.readLong("uploaded", "uploaded_bytes", "up_total")
+                ?: return@mapNotNull null
+            CountryPeerSnapshot(
+                key = "$hash|$peerAddress|$countryCode",
+                peerAddress = peerAddress,
+                countryCode = countryCode,
+                countryName = peer.readString("country_name", "countryName", "country"),
+                uploadedBytes = uploadedBytes.coerceAtLeast(0L),
+            )
+        }
+    }
+
+    private fun buildPeerAddress(peer: JsonObject, peerId: String): String {
+        val ip = peer.readString("ip", "addr", "address")
+        val port = peer.readString("port")
+        val endpoint = when {
+            ip.isNotBlank() && port.isNotBlank() -> "$ip:$port"
+            ip.isNotBlank() -> ip
+            else -> peerId.trim()
+        }
+        return endpoint.ifBlank { peerId.trim() }.ifBlank { "unknown-peer" }
+    }
+
+    private fun JsonElement.asJsonObjectOrNull(): JsonObject? {
+        return runCatching { asJsonObject }.getOrNull()
+    }
+
+    private fun JsonObject.readString(vararg keys: String): String {
+        keys.forEach { key ->
+            val value = get(key) ?: return@forEach
+            if (!value.isJsonNull) {
+                val text = runCatching { value.asString.trim() }.getOrNull().orEmpty()
+                if (text.isNotBlank()) return text
+            }
+        }
+        return ""
+    }
+
+    private fun JsonObject.readLong(vararg keys: String): Long? {
+        keys.forEach { key ->
+            val value = get(key) ?: return@forEach
+            if (value.isJsonNull) return@forEach
+            runCatching { value.asLong }.getOrNull()?.let { return it }
+            runCatching { value.asString.trim().toLong() }.getOrNull()?.let { return it }
+        }
+        return null
     }
 
     private fun normalizeTransferInfo(
