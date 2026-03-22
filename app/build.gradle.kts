@@ -58,8 +58,10 @@ android {
             isShrinkResources = false
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep release builds behaviorally aligned with the verified debug builds.
+            // The current app still has release-only runtime regressions under R8/resource shrinking.
+            isMinifyEnabled = false
+            isShrinkResources = false
             if (hasReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
