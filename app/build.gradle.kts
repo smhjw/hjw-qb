@@ -37,8 +37,8 @@ android {
         applicationId = "com.hjw.qbremote"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.1.10"
+        versionCode = 12
+        versionName = "0.1.11"
     }
 
     signingConfigs {

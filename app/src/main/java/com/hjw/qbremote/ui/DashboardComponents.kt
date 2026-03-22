@@ -419,7 +419,7 @@ private fun RealtimeSpeedChart(
     ) {
         Column(
             modifier = Modifier
-                .width(60.dp)
+                .widthIn(min = 74.dp)
                 .height(chartHeight)
                 .padding(top = 2.dp, end = 6.dp),
             verticalArrangement = Arrangement.SpaceBetween,
@@ -432,6 +432,7 @@ private fun RealtimeSpeedChart(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.End,
                     maxLines = 1,
+                    softWrap = false,
                 )
             }
         }
