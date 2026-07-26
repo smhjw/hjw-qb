@@ -136,7 +136,7 @@ internal fun ServerDashboardPageContent(
                         ReorderableDashboardCard(
                             card = displayCard.owner,
                             gestureKey = dashboardDragGestureKey,
-                            isDragging = draggingDashboardCard == displayCard,
+                            isDragging = draggingDashboardCard == displayCard && settlingDashboardCard != displayCard,
                             isSettling = settlingDashboardCard == displayCard,
                             dragOffsetY = { if (draggingDashboardCard == displayCard) draggingDashboardOffsetY() else 0f },
                             settlingOffsetY = { if (settlingDashboardCard == displayCard) settlingDashboardOffsetY() else 0f },
@@ -263,6 +263,64 @@ private fun ServerDashboardCardRenderer(
             onRevealHide = onRevealHide,
             onHide = onHide,
         )
+
+        DashboardChartCard.SIZE_DISTRIBUTION -> ServerDashboardPieCard(
+            title = stringResource(R.string.dashboard_size_distribution_title),
+            entries = buildSizeDistributionEntries(displayState.torrents),
+            emptyText = stringResource(R.string.chart_no_data),
+            showHideButton = showHideButton,
+            onRevealHide = onRevealHide,
+            onHide = onHide,
+        )
+
+        DashboardChartCard.SHARE_RATIO_DISTRIBUTION -> ServerDashboardPieCard(
+            title = stringResource(R.string.dashboard_share_ratio_distribution_title),
+            entries = buildShareRatioDistributionEntries(displayState.torrents),
+            emptyText = stringResource(R.string.chart_no_data),
+            showHideButton = showHideButton,
+            onRevealHide = onRevealHide,
+            onHide = onHide,
+        )
+    }
+}
+
+private fun buildShareRatioDistributionEntries(
+    torrents: List<TorrentInfo>,
+): List<PieLegendSeedEntry> {
+    val display = buildShareRatioDistributionDisplay(torrents)
+    if (display.totalCount == 0) return emptyList()
+    val bucketLabels = listOf("< 1", "1 - 2", "2 - 5", ">= 5")
+    return display.bucketCounts.mapIndexedNotNull { index, count ->
+        count.takeIf { it > 0 }?.let {
+            PieLegendSeedEntry(
+                label = LegendLabelSpec.Raw(bucketLabels[index]),
+                value = it.toLong(),
+                valueKind = LegendValueKind.TORRENT_COUNT,
+            )
+        }
+    }
+}
+
+private fun buildSizeDistributionEntries(
+    torrents: List<TorrentInfo>,
+): List<PieLegendSeedEntry> {
+    if (torrents.isEmpty()) return emptyList()
+    val gib = 1024L * 1024L * 1024L
+    val bucketLabels = listOf("< 1 GB", "1 - 10 GB", "10 - 50 GB", ">= 50 GB")
+    val bucketCounts = listOf(
+        torrents.count { it.size < gib },
+        torrents.count { it.size >= gib && it.size < 10 * gib },
+        torrents.count { it.size >= 10 * gib && it.size < 50 * gib },
+        torrents.count { it.size >= 50 * gib },
+    )
+    return bucketCounts.mapIndexedNotNull { index, count ->
+        count.takeIf { it > 0 }?.let {
+            PieLegendSeedEntry(
+                label = LegendLabelSpec.Raw(bucketLabels[index]),
+                value = it.toLong(),
+                valueKind = LegendValueKind.TORRENT_COUNT,
+            )
+        }
     }
 }
 

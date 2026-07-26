@@ -1,11 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TorrentRemote</string>
-    <string name="widget_title">TorrentRemote</string>
-    <string name="widget_description">显示上下行速度和种子数</string>
-    <string name="widget_torrents">种子</string>
     <string name="notification_channel_torrent">种子状态</string>
     <string name="notification_torrent_completed">种子下载完成</string>
+    <string name="notification_torrent_completed_detail">%1$s：%2$s 已完成下载</string>
 
     <string name="menu_settings">设置</string>
     <string name="menu_servers">服务器</string>
@@ -26,6 +24,7 @@
     <string name="theme_custom_save_failed">保存背景图失败</string>
     <string name="back">返回</string>
     <string name="go_to_settings">前往设置</string>
+    <string name="retry">重试</string>
 
     <string name="settings_language">语言</string>
     <string name="settings_language_system">跟随系统</string>
@@ -35,6 +34,9 @@
     <string name="settings_language_apply_hint">选择语言后点击“保存”，并立即生效</string>
     <string name="settings_delete_when_no_seeders">无做种时默认勾选删除文件</string>
     <string name="settings_delete_by_default">删除种子时默认勾选删除文件</string>
+    <string name="settings_completion_notifications">种子完成通知</string>
+    <string name="settings_notification_permission_denied">通知权限未开启，无法推送完成提醒</string>
+    <string name="settings_open_notification_settings">打开通知设置</string>
 
     <string name="connect_first_hint">请先连接服务器后再查看种子详情。</string>
     <string name="connection_title">连接设置</string>
@@ -48,6 +50,7 @@
     <string name="password_visibility_show">显示密码</string>
     <string name="password_visibility_hide">隐藏密码</string>
     <string name="connection_https_label">HTTPS</string>
+    <string name="settings_cleartext_public_warning">当前通过未加密 HTTP 连接公网地址，凭据可能被窃听。建议启用 HTTPS。</string>
     <string name="connect">连接</string>
     <string name="connecting">连接中…</string>
 
@@ -74,20 +77,11 @@
     <string name="dashboard_torrent_state_share_title">种子状态占比</string>
     <string name="dashboard_tracker_site_share_title">Tracker 站点占比</string>
     <string name="dashboard_tracker_site_unknown">未知站点</string>
+    <string name="dashboard_tracker_site_none">无 Tracker</string>
     <string name="dashboard_open_torrents">查看种子</string>
     <string name="dashboard_open_torrents_hint">点此进入</string>
     <string name="dashboard_country_flow_title">今日已观测上传分布</string>
     <string name="dashboard_country_flow_empty">当前暂无可观测的国家上传数据。</string>
-    <string name="dashboard_country_flow_note">数据仅基于当前活跃连接的 peer 观测增量，可能低于实际全天上传总量。</string>
-    <string name="chart_size_bucket_under_one_gb">&lt;1 GB</string>
-    <string name="chart_size_bucket_one_to_ten_gb">1–10 GB</string>
-    <string name="chart_size_bucket_ten_to_fifty_gb">10–50 GB</string>
-    <string name="chart_size_bucket_fifty_plus_gb">50+ GB</string>
-    <string name="chart_ratio_bucket_under_half">&lt;0.5</string>
-    <string name="chart_ratio_bucket_half_to_one">0.5–1</string>
-    <string name="chart_ratio_bucket_one_to_two">1–2</string>
-    <string name="chart_ratio_bucket_two_to_five">2–5</string>
-    <string name="chart_ratio_bucket_five_plus">5+</string>
     <string name="dismiss_hint">关闭提示</string>
 
     <string name="status_uploading">上传中</string>
@@ -240,6 +234,39 @@
     <string name="dashboard_all_cards_hidden_title">图表已全部隐藏</string>
     <string name="dashboard_all_cards_hidden_body">可以在图表管理中重新显示这些卡片。</string>
     <string name="close">关闭</string>
+
+    <string name="global_speed_limit_action">全局限速</string>
+    <string name="global_speed_limit_title">全局限速</string>
+    <string name="global_speed_limit_server_label">服务器</string>
+    <string name="global_speed_limit_load_failed">限速信息加载失败</string>
+    <string name="global_speed_limit_normal_section">常规限速</string>
+    <string name="global_speed_limit_alternative_section">备用限速</string>
+    <string name="global_speed_limit_download_label">下载限速（KiB/s）</string>
+    <string name="global_speed_limit_upload_label">上传限速（KiB/s）</string>
+    <string name="global_speed_limit_alternative_download_label">备用下载限速（KiB/s）</string>
+    <string name="global_speed_limit_alternative_upload_label">备用上传限速（KiB/s）</string>
+    <string name="global_speed_limit_unlimited_hint">0 或留空表示不限速</string>
+    <string name="global_speed_limit_mode_normal">当前使用常规限速</string>
+    <string name="global_speed_limit_mode_alternative">当前使用备用限速</string>
+    <string name="global_speed_limit_mode_unknown">当前限速模式未知</string>
+    <string name="global_speed_limit_schedule_title">定时启用备用限速</string>
+    <string name="global_speed_limit_schedule_desc">在设定时间段自动启用备用限速</string>
+    <string name="global_speed_limit_schedule_start">开始时间</string>
+    <string name="global_speed_limit_schedule_end">结束时间</string>
+    <string name="global_speed_limit_schedule_hour">时</string>
+    <string name="global_speed_limit_schedule_minute">分</string>
+    <string name="global_speed_limit_schedule_day">生效日</string>
+    <string name="global_speed_limit_day_every_day">每天</string>
+    <string name="global_speed_limit_day_weekdays">工作日</string>
+    <string name="global_speed_limit_day_weekends">周末</string>
+    <string name="global_speed_limit_day_monday">周一</string>
+    <string name="global_speed_limit_day_tuesday">周二</string>
+    <string name="global_speed_limit_day_wednesday">周三</string>
+    <string name="global_speed_limit_day_thursday">周四</string>
+    <string name="global_speed_limit_day_friday">周五</string>
+    <string name="global_speed_limit_day_saturday">周六</string>
+    <string name="global_speed_limit_day_sunday">周日</string>
+    <string name="error_speed_limit_invalid">请输入 0 到 2147483647 之间的 KiB/s 数值</string>
 
     <string name="detail_section_name">名称</string>
     <string name="detail_new_name_label">新名称</string>

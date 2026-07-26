@@ -229,7 +229,7 @@ class MainViewModelAsyncGuardSupportTest {
                 expectedBackend = ServerBackendType.QBITTORRENT,
                 detectedBackend = ServerBackendType.TRANSMISSION,
             ),
-            errorMessage = "boom",
+            errorMessage = UiMessage.Text("boom"),
         )
         val nextSettings = ConnectionSettings(
             host = "next-host",

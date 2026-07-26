@@ -18,7 +18,10 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -35,12 +38,19 @@ class QbRepository : TorrentBackend {
     private var api: QbApi? = null
     private var activeSettings: ConnectionSettings? = null
 
-    private val baseOkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(12, TimeUnit.SECONDS)
-            .writeTimeout(12, TimeUnit.SECONDS)
-            .build()
+    // Shared across all QbRepository instances (including one-shot dashboard
+    // fetchers): OkHttpClient owns a connection pool and dispatcher thread pool,
+    // and per-instance clients leaked threads/connections on every periodic refresh.
+    private val baseOkHttpClient get() = sharedOkHttpClient
+
+    companion object {
+        private val sharedOkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .connectTimeout(8, TimeUnit.SECONDS)
+                .readTimeout(12, TimeUnit.SECONDS)
+                .writeTimeout(12, TimeUnit.SECONDS)
+                .build()
+        }
     }
 
     private val torrentCache = linkedMapOf<String, TorrentInfo>()
@@ -69,6 +79,12 @@ class QbRepository : TorrentBackend {
                     torrentCache.clear()
                     return@runCatching
                 } catch (error: Throwable) {
+                    // Never swallow cancellation: continuing the candidate loop after
+                    // the caller was cancelled breaks structured concurrency and keeps
+                    // issuing network requests nobody is waiting for.
+                    if (error is CancellationException) {
+                        throw error
+                    }
                     lastError = error
                     val detail = error.message?.takeIf { it.isNotBlank() }
                         ?: error::class.simpleName
@@ -125,7 +141,7 @@ class QbRepository : TorrentBackend {
         require(hash.isNotBlank()) { "Invalid torrent hash." }
         try {
             executeWithRetry { liveApi ->
-                liveApi.stopTorrents(hash).ensureSuccess("Pause failed.")
+                liveApi.stopTorrents(hash).ensureSuccessOrMissingEndpoint("Pause failed.")
             }
         } catch (e: HttpException) {
             if (e.code() == 404 || e.code() == 405) {
@@ -142,7 +158,7 @@ class QbRepository : TorrentBackend {
         require(hash.isNotBlank()) { "Invalid torrent hash." }
         try {
             executeWithRetry { liveApi ->
-                liveApi.startTorrents(hash).ensureSuccess("Resume failed.")
+                liveApi.startTorrents(hash).ensureSuccessOrMissingEndpoint("Resume failed.")
             }
         } catch (e: HttpException) {
             if (e.code() == 404 || e.code() == 405) {
@@ -235,10 +251,15 @@ class QbRepository : TorrentBackend {
 
     override suspend fun exportTorrentFile(hash: String): Result<ByteArray> = runCatching {
         require(hash.isNotBlank()) { "Invalid torrent hash." }
-        val response = executeWithRetry { liveApi -> liveApi.exportTorrent(hash) }
-        response.ensureSuccess("Export torrent failed.")
-        response.body()?.bytes()
-            ?: throw IllegalStateException("Export torrent failed. Empty response body.")
+        executeWithRetry { liveApi ->
+            val response = liveApi.exportTorrent(hash)
+            response.ensureSuccess("Export torrent failed.")
+            // bytes() performs the actual socket read of the streamed body; keep it
+            // off the main thread (callers run in viewModelScope).
+            withContext(Dispatchers.IO) {
+                response.body()?.bytes()
+            } ?: throw IllegalStateException("Export torrent failed. Empty response body.")
+        }
     }
 
     override suspend fun fetchCategoryOptions(): Result<List<String>> = runCatching {
@@ -315,6 +336,52 @@ class QbRepository : TorrentBackend {
             }
         }
 
+    override suspend fun fetchGlobalSpeedLimits(): Result<GlobalSpeedLimits> = runCatching {
+        executeWithRetry { liveApi ->
+            val prefs = liveApi.appPreferences()
+            fun limitKb(key: String): Long =
+                (prefs.get(key)?.asLong ?: 0L).coerceAtLeast(0L) / 1024L
+            val startMinutes = (prefs.get("schedule_from_hour")?.asInt ?: 0) * 60 +
+                (prefs.get("schedule_from_min")?.asInt ?: 0)
+            val endMinutes = (prefs.get("schedule_to_hour")?.asInt ?: 0) * 60 +
+                (prefs.get("schedule_to_min")?.asInt ?: 0)
+            val alternativeMode = runCatching {
+                liveApi.speedLimitsMode().trim() == "1"
+            }.getOrNull()
+            GlobalSpeedLimits(
+                downloadLimitKb = limitKb("dl_limit"),
+                uploadLimitKb = limitKb("up_limit"),
+                alternativeDownloadLimitKb = limitKb("alt_dl_limit"),
+                alternativeUploadLimitKb = limitKb("alt_up_limit"),
+                schedulerEnabled = prefs.get("scheduler_enabled")?.asBoolean == true,
+                scheduleStartMinutes = startMinutes,
+                scheduleEndMinutes = endMinutes,
+                scheduleDayPreset = ScheduleDayPreset.fromQbSchedulerDays(
+                    prefs.get("scheduler_days")?.asInt ?: 0,
+                ),
+                alternativeModeEnabled = alternativeMode,
+            )
+        }
+    }
+
+    override suspend fun setGlobalSpeedLimits(limits: GlobalSpeedLimits): Result<Unit> = runCatching {
+        executeWithRetry { liveApi ->
+            val payload = JsonObject().apply {
+                addProperty("dl_limit", limits.downloadLimitKb * 1024L)
+                addProperty("up_limit", limits.uploadLimitKb * 1024L)
+                addProperty("alt_dl_limit", limits.alternativeDownloadLimitKb * 1024L)
+                addProperty("alt_up_limit", limits.alternativeUploadLimitKb * 1024L)
+                addProperty("scheduler_enabled", limits.schedulerEnabled)
+                addProperty("schedule_from_hour", limits.scheduleStartMinutes / 60)
+                addProperty("schedule_from_min", limits.scheduleStartMinutes % 60)
+                addProperty("schedule_to_hour", limits.scheduleEndMinutes / 60)
+                addProperty("schedule_to_min", limits.scheduleEndMinutes % 60)
+                addProperty("scheduler_days", limits.scheduleDayPreset.qbSchedulerDays)
+            }
+            liveApi.setAppPreferences(payload.toString()).ensureSuccess("Set global speed limits failed.")
+        }
+    }
+
     override suspend fun setTorrentShareRatio(hash: String, ratioLimit: Double): Result<Unit> = runCatching {
         require(hash.isNotBlank()) { "Invalid torrent hash." }
         executeWithRetry { liveApi ->
@@ -348,8 +415,11 @@ class QbRepository : TorrentBackend {
             if (request.uploadLimitBytes >= 0L) formFields["upLimit"] = request.uploadLimitBytes.toString()
             if (request.downloadLimitBytes >= 0L) formFields["dlLimit"] = request.downloadLimitBytes.toString()
 
-            val response = executeWithRetry { liveApi -> liveApi.addTorrentsForm(formFields) }
-            response.ensureSuccess("Add torrent failed.")
+            executeWithRetry { liveApi ->
+                liveApi.addTorrentsForm(formFields).also {
+                    it.ensureSuccess("Add torrent failed.")
+                }
+            }
             return@runCatching
         }
 
@@ -387,9 +457,10 @@ class QbRepository : TorrentBackend {
         }
 
         val response = executeWithRetry { liveApi ->
-            liveApi.addTorrents(fields, fileParts)
+            liveApi.addTorrents(fields, fileParts).also {
+                it.ensureSuccess("Add torrent failed.")
+            }
         }
-        response.ensureSuccess("Add torrent failed.")
         val resultText = response.body().orEmpty().trim()
         if (resultText.contains("fail", ignoreCase = true)) {
             throw IllegalStateException("添加种子失败：$resultText")
@@ -545,6 +616,8 @@ class QbRepository : TorrentBackend {
                     delay(nextDelayMs)
                     nextDelayMs = (nextDelayMs * 2).coerceAtMost(4000L)
                 } catch (error: AuthLockedException) {
+                    throw error
+                } catch (error: CancellationException) {
                     throw error
                 } catch (error: Throwable) {
                     lastError = error
@@ -760,9 +833,25 @@ class QbRepository : TorrentBackend {
 
     private fun Response<*>.ensureSuccess(defaultMessage: String) {
         if (!isSuccessful) {
+            // Session expiry surfaces as 401/403 on endpoints returning Response<T>
+            // (which never throw on their own). Raise HttpException so
+            // executeWithRetry re-logins and retries write operations too.
+            if (code() == 401 || code() == 403) {
+                throw HttpException(this)
+            }
             val extra = errorBody()?.string()?.takeIf { it.isNotBlank() } ?: code().toString()
             throw IllegalStateException("$defaultMessage ($extra)")
         }
+    }
+
+    // qBittorrent < 5.0 has no stop/start endpoints; surface 404/405 as
+    // HttpException (which executeWithRetry does not retry) so callers can
+    // fall back to the legacy pause/resume endpoints.
+    private fun Response<*>.ensureSuccessOrMissingEndpoint(defaultMessage: String) {
+        if (!isSuccessful && (code() == 404 || code() == 405)) {
+            throw HttpException(this)
+        }
+        ensureSuccess(defaultMessage)
     }
 
     private fun parseTagOptions(raw: String): List<String> {
@@ -1008,7 +1097,8 @@ class QbRepository : TorrentBackend {
     }
 
     private class SessionCookieJar : CookieJar {
-        private val cookieStore = mutableMapOf<String, List<Cookie>>()
+        // Accessed concurrently from OkHttp worker threads.
+        private val cookieStore = java.util.concurrent.ConcurrentHashMap<String, List<Cookie>>()
 
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             cookieStore[url.host] = cookies

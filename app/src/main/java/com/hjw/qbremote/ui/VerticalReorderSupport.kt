@@ -3,6 +3,13 @@ package com.hjw.qbremote.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import com.hjw.qbremote.data.CachedDashboardServerSnapshot
 
 internal data class VerticalReorderSession<T>(
@@ -22,15 +29,95 @@ internal data class VerticalReorderDragState<T>(
     val targetIndex: Int,
 )
 
-internal const val ReorderDraggedScale = 1.005f
-internal const val ReorderDraggedShadow = 6f
-internal const val ReorderSettlingShadow = 4f
+/**
+ * Snapshot-state holder for one long-press reorder gesture.
+ *
+ * The per-frame drag offset lives in its own [mutableFloatStateOf] so that pointer
+ * moves and the settle animation never invalidate composition: [offsetY] must only be
+ * read from draw-phase lambdas (inside `graphicsLayer`). Composition-level consumers
+ * read [draggingItem], [settlingItem], [targetIndex] and [session], which only change
+ * on gesture start/end and when the drag crosses a slot threshold.
+ */
+@Stable
+internal class VerticalReorderUiState<T> {
+    var draggingItem: T? by mutableStateOf(null)
+        private set
+    var settlingItem: T? by mutableStateOf(null)
+        private set
+    var session: VerticalReorderSession<T>? by mutableStateOf(null)
+        private set
+    var targetIndex: Int by mutableIntStateOf(-1)
+        private set
+
+    private val offsetYState = mutableFloatStateOf(0f)
+
+    /** Per-frame drag offset. Only read inside graphicsLayer/draw lambdas. */
+    val offsetY: Float
+        get() = offsetYState.floatValue
+
+    /** The item currently owning the gesture, whether dragging or settling. */
+    val activeItem: T?
+        get() = draggingItem ?: settlingItem
+
+    fun start(session: VerticalReorderSession<T>, item: T) {
+        Snapshot.withMutableSnapshot {
+            this.session = session
+            draggingItem = item
+            settlingItem = null
+            targetIndex = session.startIndex
+            offsetYState.floatValue = 0f
+        }
+    }
+
+    fun applyDelta(item: T, deltaY: Float) {
+        val activeSession = session ?: return
+        if (settlingItem != null || draggingItem != item) return
+        val nextOffsetY = (offsetYState.floatValue + deltaY)
+            .coerceIn(activeSession.minOffset, activeSession.maxOffset)
+        offsetYState.floatValue = nextOffsetY
+        targetIndex = resolveVerticalReorderTargetIndexWithHysteresis(
+            session = activeSession,
+            dragOffsetY = nextOffsetY,
+            previousTargetIndex = targetIndex,
+        )
+    }
+
+    /** Freezes the target index and hands the item over to the settle animation. */
+    fun beginSettle(finalTargetIndex: Int) {
+        Snapshot.withMutableSnapshot {
+            settlingItem = draggingItem ?: settlingItem
+            draggingItem = null
+            targetIndex = finalTargetIndex
+        }
+    }
+
+    fun updateSettleOffset(value: Float) {
+        offsetYState.floatValue = value
+    }
+
+    fun clear() {
+        session = null
+        draggingItem = null
+        settlingItem = null
+        targetIndex = -1
+        offsetYState.floatValue = 0f
+    }
+
+    /** Immutable view of the current gesture for the pure resolver functions. */
+    fun snapshotDragState(): VerticalReorderDragState<T>? {
+        val activeSession = session ?: return null
+        val item = activeItem ?: return null
+        return VerticalReorderDragState(
+            item = item,
+            session = activeSession,
+            offsetY = offsetYState.floatValue,
+            targetIndex = targetIndex,
+        )
+    }
+}
+
 internal const val ReorderSelectedShadow = 10f
 internal const val ReorderCollapsedShadow = 4f
-internal val ReorderScaleAnimationSpec = spring<Float>(
-    dampingRatio = 1f,
-    stiffness = 900f,
-)
 internal val ReorderSiblingOffsetAnimationSpec = spring<Float>(
     dampingRatio = 1f,
     stiffness = 900f,

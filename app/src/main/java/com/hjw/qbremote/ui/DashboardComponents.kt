@@ -1,8 +1,7 @@
-﻿package com.hjw.qbremote.ui
+package com.hjw.qbremote.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -32,6 +31,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -472,11 +472,6 @@ fun ReorderableDashboardCard(
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
-    val draggedScale by animateFloatAsState(
-        targetValue = if (isDragging) ReorderDraggedScale else 1f,
-        animationSpec = ReorderScaleAnimationSpec,
-        label = "dashboardDraggedScale",
-    )
     val animatedSiblingOffset by animateFloatAsState(
         targetValue = siblingOffsetY,
         animationSpec = if (animateSiblingOffset) {
@@ -490,6 +485,17 @@ fun ReorderableDashboardCard(
     val latestOnDragDelta by rememberUpdatedState(onDragDelta)
     val latestOnDragEnd by rememberUpdatedState(onDragEnd)
     val latestOnDragCancel by rememberUpdatedState(onDragCancel)
+    val latestIsDragging by rememberUpdatedState(isDragging)
+    // pointerInput restarts on key change without invoking onDragCancel, which would
+    // leave a drag permanently active (stuck card, page scroll disabled). Cancel it
+    // explicitly whenever the gesture host is torn down mid-drag.
+    DisposableEffect(card, gestureKey) {
+        onDispose {
+            if (latestIsDragging) {
+                latestOnDragCancel()
+            }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -512,17 +518,12 @@ fun ReorderableDashboardCard(
                 translationY = when {
                     isDragging -> dragOffsetY()
                     isSettling -> settlingOffsetY()
+                    // Hard zero once the reorder session is gone: animateFloatAsState
+                    // snaps one frame late, and that stale frame after the order commit
+                    // is exactly the "ghost card" flicker on drop.
+                    !animateSiblingOffset -> 0f
                     else -> animatedSiblingOffset
                 }
-                shadowElevation = when {
-                    isDragging -> ReorderDraggedShadow
-                    isSettling -> ReorderSettlingShadow
-                    else -> 0f
-                }
-                scaleX = if (isDragging) draggedScale else 1f
-                scaleY = if (isDragging) draggedScale else 1f
-                shape = PanelShape
-                clip = isDragging || isSettling
             }
             .pointerInput(card, gestureKey) {
                 detectDragGesturesAfterLongPress(
@@ -536,6 +537,13 @@ fun ReorderableDashboardCard(
                 )
             },
     ) {
+        if (isDragging || isSettling) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(MaterialTheme.colorScheme.surface, PanelShape),
+            )
+        }
         content()
     }
 }
@@ -782,128 +790,6 @@ private fun resolveDashboardBarEntries(
                 valueKind = entry.valueKind,
             ),
         )
-    }
-}
-
-@Composable
-internal fun DashboardVerticalBarChartCard(
-    title: String,
-    entries: List<DashboardBarSeedEntry>,
-    emptyText: String,
-    showHideButton: Boolean,
-    onRevealHide: () -> Unit,
-    onHide: () -> Unit,
-    accentColor: Color,
-) {
-    val resolvedEntries = resolveDashboardBarEntries(entries)
-
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = PanelShape,
-        border = BorderStroke(1.dp, qbGlassOutlineColor()),
-        colors = qbGlassCardColors(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 13.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            DashboardCardHeader(
-                title = title,
-                showHideButton = showHideButton,
-                onRevealHide = onRevealHide,
-                onHide = onHide,
-            )
-
-            DashboardVerticalBarChartContent(
-                entries = resolvedEntries,
-                emptyText = emptyText,
-                accentColor = accentColor,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DashboardVerticalBarChartContent(
-    entries: List<ResolvedDashboardBarEntry>,
-    emptyText: String,
-    accentColor: Color,
-) {
-    if (entries.isEmpty()) {
-        DashboardInlineEmptyState(text = emptyText)
-        return
-    }
-
-    val maxValue = entries.maxOf { it.value }.coerceAtLeast(1L).toFloat()
-    val chartHeight = 212.dp
-    val columnAreaHeight = 124.dp
-    val barHeightRange = 108.dp
-    val minVisibleBarHeight = 6.dp
-    val fixedBarWidth = 18.dp
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = chartHeight),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        entries.forEachIndexed { index, entry ->
-            val ratio = (entry.value.toFloat() / maxValue).coerceIn(0f, 1f)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = entry.valueText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(columnAreaHeight),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(qbGlassOutlineColor(defaultAlpha = 0.2f))
-                            .align(Alignment.BottomCenter),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(fixedBarWidth)
-                            .height(
-                                if (entry.value > 0L) {
-                                    (barHeightRange * ratio).coerceAtLeast(minVisibleBarHeight)
-                                } else {
-                                    0.dp
-                                }
-                            )
-                            .background(
-                                color = DashboardPiePalette[index % DashboardPiePalette.size].copy(alpha = 0.92f),
-                                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                            ),
-                    )
-                }
-                Text(
-                    text = entry.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = accentColor,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
     }
 }
 

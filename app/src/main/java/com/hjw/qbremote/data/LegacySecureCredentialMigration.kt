@@ -12,20 +12,34 @@ internal fun migrateLegacyEncryptedPrefsIfNeeded(
     targetPrefs: SharedPreferences,
     encryptor: (String) -> String,
 ) {
+    migrateLegacyPrefs(
+        targetPrefs = targetPrefs,
+        encryptor = encryptor,
+        legacyPrefsProvider = {
+            runCatching {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                EncryptedSharedPreferences.create(
+                    context,
+                    LEGACY_PREF_FILE_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            }.getOrNull()
+        },
+    )
+}
+
+internal fun migrateLegacyPrefs(
+    targetPrefs: SharedPreferences,
+    encryptor: (String) -> String,
+    legacyPrefsProvider: () -> SharedPreferences?,
+) {
     if (targetPrefs.getBoolean(KEY_LEGACY_MIGRATED, false)) return
 
-    val legacyPrefs = runCatching {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            LEGACY_PREF_FILE_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }.getOrNull()
+    val legacyPrefs = legacyPrefsProvider()
 
     if (legacyPrefs == null) {
         targetPrefs.edit().putBoolean(KEY_LEGACY_MIGRATED, true).apply()

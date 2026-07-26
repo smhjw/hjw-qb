@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
-    <!-- qBittorrent WebUI is often deployed in LAN over HTTP; keep cleartext enabled intentionally. -->
+    <!--
+        qBittorrent/Transmission WebUIs are commonly deployed in LAN over plain HTTP,
+        so cleartext stays enabled intentionally. NSC domain-config only matches concrete
+        domain names, not IP ranges, so this cannot be tightened to private subnets here;
+        warning users about cleartext connections to public hosts is handled at the app
+        layer instead (data/HostClassification.kt).
+    -->
     <base-config
         cleartextTrafficPermitted="true"
         tools:ignore="InsecureBaseConfiguration" />

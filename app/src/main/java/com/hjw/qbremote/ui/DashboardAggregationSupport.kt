@@ -48,17 +48,6 @@ internal fun buildDashboardAggregateFromSnapshots(
     )
 }
 
-internal fun mergeTransferInfoIntoDashboardSnapshots(
-    snapshots: List<CachedDashboardServerSnapshot>,
-    transferInfoByProfileId: Map<String, TransferInfo>,
-): List<CachedDashboardServerSnapshot> {
-    if (transferInfoByProfileId.isEmpty()) return snapshots
-    return snapshots.map { snapshot ->
-        val transferInfo = transferInfoByProfileId[snapshot.profileId] ?: return@map snapshot
-        snapshot.copy(transferInfo = transferInfo)
-    }
-}
-
 private fun aggregateDashboardTagStats(
     snapshots: List<CachedDashboardServerSnapshot>,
 ): Pair<String, List<DailyTagUploadStat>> {

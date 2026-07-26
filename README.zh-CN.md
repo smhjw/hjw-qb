@@ -4,5 +4,14 @@
 
 - 双语主文档：[`README.md`](README.md)
 - 中文入口：[`README.md#zh-cn`](README.md#zh-cn)
-- 当前版本：`0.1.15 (versionCode 16)`
+- 当前版本：`0.1.21 (versionCode 22)`
 - Google Play 图标：`play-assets/icon/qbitremote-play-icon-512.png`
+
+## 下载
+
+预编译安装包永远不会提交到本仓库。请从以下渠道获取正式版本：
+
+- GitHub Releases（签名 APK + `SHA256SUMS-vX.Y.Z.txt` 校验和清单）
+- Google Play
+
+下载后请对照每次发布附带的校验和清单进行校验。

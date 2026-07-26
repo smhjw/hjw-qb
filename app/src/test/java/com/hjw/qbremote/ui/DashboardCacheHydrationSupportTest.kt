@@ -82,4 +82,55 @@ class DashboardCacheHydrationSupportTest {
         assertTrue(updated.dashboardCacheHydrated)
         assertTrue(updated.hasDashboardSnapshot)
     }
+
+    @Test
+    fun buildDashboardCacheSnapshot_capturesDashboardFieldsFromState() {
+        val state = dashboardStateForCache()
+
+        val cache = buildDashboardCacheSnapshot(state)
+
+        assertEquals(state.transferInfo, cache.transferInfo)
+        assertEquals(state.torrents, cache.torrents)
+        assertEquals("2026-07-26", cache.dailyTagUploadDate)
+        assertEquals(
+            listOf(CachedDailyTagUploadStat(tag = "", uploadedBytes = 128L, torrentCount = 3, isNoTag = true)),
+            cache.dailyTagUploadStats,
+        )
+        assertEquals("2026-07-26", cache.dailyCountryUploadDate)
+        assertEquals(state.dailyCountryUploadStats, cache.dailyCountryUploadStats)
+    }
+
+    @Test
+    fun buildDashboardCacheSnapshot_roundTripsThroughHydration() {
+        val state = dashboardStateForCache()
+
+        val hydrated = applyDashboardCacheHydration(
+            current = MainUiState(),
+            cache = buildDashboardCacheSnapshot(state),
+        )
+
+        assertEquals(state.transferInfo, hydrated.transferInfo)
+        assertEquals(state.torrents, hydrated.torrents)
+        assertEquals(state.dailyTagUploadDate, hydrated.dailyTagUploadDate)
+        assertEquals(state.dailyTagUploadStats, hydrated.dailyTagUploadStats)
+        assertEquals(state.dailyCountryUploadDate, hydrated.dailyCountryUploadDate)
+        assertEquals(state.dailyCountryUploadStats, hydrated.dailyCountryUploadStats)
+        assertTrue(hydrated.dashboardCacheHydrated)
+        assertTrue(hydrated.hasDashboardSnapshot)
+    }
+
+    private fun dashboardStateForCache(): MainUiState {
+        return MainUiState(
+            transferInfo = TransferInfo(uploadSpeed = 5L, downloadSpeed = 7L),
+            torrents = listOf(TorrentInfo(hash = "hash-9", name = "Snapshot torrent")),
+            dailyTagUploadDate = "2026-07-26",
+            dailyTagUploadStats = listOf(
+                DailyTagUploadStat(tag = "", uploadedBytes = 128L, torrentCount = 3, isNoTag = true),
+            ),
+            dailyCountryUploadDate = "2026-07-26",
+            dailyCountryUploadStats = listOf(
+                CountryUploadRecord(countryCode = "DE", countryName = "Germany", uploadedBytes = 256L),
+            ),
+        )
+    }
 }

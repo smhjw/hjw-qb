@@ -73,6 +73,8 @@ class SecureCredentialStore(context: Context) {
         val encoded = storedValue?.trim().orEmpty()
         if (encoded.isEmpty()) return ""
         return runCatching {
+            // Legacy migration compatibility: writers always produce v2:-prefixed values,
+            // so an unprefixed value is pre-encryption plaintext returned as-is.
             if (!encoded.startsWith(VALUE_PREFIX)) return@runCatching encoded
             val payload = Base64.decode(encoded.removePrefix(VALUE_PREFIX), Base64.NO_WRAP)
             val buffer = ByteBuffer.wrap(payload)

@@ -21,15 +21,6 @@ fun formatBytes(value: Long): String {
 
 fun formatSpeed(value: Long): String = "${formatBytes(value)}/s"
 
-fun formatUploadAmountInMbOrGb(value: Long): String {
-    val megabytes = value.coerceAtLeast(0L).toDouble() / 1024.0 / 1024.0
-    return if (megabytes >= 1024.0) {
-        String.format(Locale.US, "%.2fGB", megabytes / 1024.0)
-    } else {
-        String.format(Locale.US, "%.2fMB", megabytes)
-    }
-}
-
 fun formatPercent(progress: Float): String {
     val pct = (progress * 100f).coerceIn(0f, 100f)
     return String.format(Locale.US, "%.2f%%", pct)

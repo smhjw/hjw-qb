@@ -9,6 +9,7 @@ import com.hjw.qbremote.data.ServerDashboardPreferences
 import com.hjw.qbremote.data.model.CountryUploadRecord
 import com.hjw.qbremote.data.model.TorrentInfo
 import com.hjw.qbremote.data.model.TransferInfo
+import java.net.URLDecoder
 import java.util.Locale
 
 internal sealed interface LegendLabelSpec {
@@ -328,7 +329,7 @@ private fun buildTransmissionTrackerSiteBarEntries(
 ): List<DashboardBarSeedEntry> {
     val grouped = linkedMapOf<LegendLabelSpec, Long>()
     torrents.forEach { torrent ->
-        val trackerLabel = transmissionTrackerLegendLabel(torrent.tracker)
+        val trackerLabel = trackerSiteLegendLabel(torrent)
         grouped[trackerLabel] = (grouped[trackerLabel] ?: 0L) + 1L
     }
     return collapseBarEntries(
@@ -363,16 +364,54 @@ private fun transmissionStateBucketOf(torrent: TorrentInfo): TransmissionStateBu
     }
 }
 
-private fun transmissionTrackerLegendLabel(trackerUrl: String): LegendLabelSpec {
-    val site = formatTrackerSiteName(
-        tracker = trackerUrl,
+private fun trackerSiteLegendLabel(torrent: TorrentInfo): LegendLabelSpec {
+    val trackerSite = formatTrackerSiteName(
+        tracker = torrent.tracker,
         unknownLabel = "",
     ).trim()
-    return if (site.isBlank()) {
-        LegendLabelSpec.Res(R.string.dashboard_tracker_site_unknown)
-    } else {
-        LegendLabelSpec.Raw(site)
+    if (trackerSite.isNotBlank()) return LegendLabelSpec.Raw(trackerSite)
+
+    val magnetTracker = firstTrackerFromMagnetUri(torrent.magnetUri)
+    if (magnetTracker != null) {
+        val magnetSite = formatTrackerSiteName(
+            tracker = magnetTracker,
+            unknownLabel = "",
+        ).trim()
+        if (magnetSite.isNotBlank()) return LegendLabelSpec.Raw(magnetSite)
     }
+
+    return if (torrent.tracker.isBlank() && torrent.magnetUri.isBlank()) {
+        LegendLabelSpec.Res(R.string.dashboard_tracker_site_none)
+    } else {
+        LegendLabelSpec.Res(R.string.dashboard_tracker_site_unknown)
+    }
+}
+
+internal fun firstTrackerFromMagnetUri(magnetUri: String): String? {
+    var candidate = magnetUri.trim()
+    if (candidate.isBlank()) return null
+    var attempts = 0
+    while (!candidate.startsWith("magnet:", ignoreCase = true) && attempts < 3) {
+        val decoded = runCatching { URLDecoder.decode(candidate, "UTF-8") }.getOrNull() ?: return null
+        if (decoded == candidate) return null
+        candidate = decoded.trim()
+        attempts++
+    }
+    if (!candidate.startsWith("magnet:", ignoreCase = true)) return null
+
+    val query = candidate.substringAfter('?', missingDelimiterValue = "")
+    if (query.isBlank()) return null
+    query.split('&').forEach { param ->
+        val key = param.substringBefore('=', missingDelimiterValue = "")
+        if (!key.equals("tr", ignoreCase = true)) return@forEach
+        val rawValue = param.substringAfter('=', missingDelimiterValue = "").trim()
+        if (rawValue.isBlank()) return@forEach
+        val decodedValue = runCatching { URLDecoder.decode(rawValue, "UTF-8") }
+            .getOrDefault(rawValue)
+            .trim()
+        if (decodedValue.isNotBlank()) return decodedValue
+    }
+    return null
 }
 
 private fun collapsePieEntries(

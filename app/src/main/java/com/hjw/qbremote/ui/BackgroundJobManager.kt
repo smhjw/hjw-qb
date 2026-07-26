@@ -13,6 +13,8 @@ internal class BackgroundJobManager(
     private val getState: () -> MainUiState,
     private val onAutoRefresh: suspend () -> Unit,
     private val onHomeChartRefresh: suspend () -> Unit,
+    private val onHourlyBoundaryRefresh: suspend () -> Unit = onAutoRefresh,
+    private val awaitForeground: suspend () -> Unit = {},
 ) {
     private var autoRefreshJob: Job? = null
     private var homeChartRefreshJob: Job? = null
@@ -22,6 +24,7 @@ internal class BackgroundJobManager(
         autoRefreshJob?.cancel()
         autoRefreshJob = scope.launch {
             while (isActive) {
+                awaitForeground()
                 val state = getState()
                 val base = state.settings.refreshSeconds.coerceIn(5, 120)
                 val adaptiveSeconds = when (state.refreshScene) {
@@ -40,6 +43,7 @@ internal class BackgroundJobManager(
         homeChartRefreshJob?.cancel()
         homeChartRefreshJob = scope.launch {
             while (isActive) {
+                awaitForeground()
                 val intervalSeconds = resolveHomeSpeedRefreshIntervalSeconds(getState().refreshScene)
                 if (intervalSeconds == null) {
                     delay(1_000L)
@@ -55,11 +59,12 @@ internal class BackgroundJobManager(
         hourlyBoundaryRefreshJob?.cancel()
         hourlyBoundaryRefreshJob = scope.launch {
             while (isActive) {
+                awaitForeground()
                 val now = ZonedDateTime.now()
                 val nextHour = now.plusHours(1).withMinute(0).withSecond(0).withNano(0)
                 val untilNext = Duration.between(now, nextHour).toMillis().coerceAtLeast(1_000L)
                 delay(untilNext)
-                if (getState().connected) onAutoRefresh()
+                if (getState().connected) onHourlyBoundaryRefresh()
             }
         }
     }

@@ -10,6 +10,13 @@ internal fun buildSortedDistinctTrimmedStrings(values: List<String>): List<Strin
         .sorted()
 }
 
+internal fun resolveEffectiveAppTheme(
+    appTheme: AppTheme,
+    customBackgroundAvailable: Boolean,
+): AppTheme {
+    return if (appTheme == AppTheme.CUSTOM && !customBackgroundAvailable) AppTheme.DARK else appTheme
+}
+
 internal fun buildPageThemeSignature(
     appTheme: AppTheme,
     customBackgroundToneIsLight: Boolean,

@@ -11,6 +11,11 @@ import kotlinx.coroutines.sync.withLock
 internal const val HOME_REALTIME_SPEED_MIN_SAMPLE_INTERVAL_MS = 1_000L
 internal const val HOME_REALTIME_SPEED_MAX_POINTS = 60
 
+// Preferences DataStore rewrites the whole file on every edit; persisting each
+// 1s sample caused constant disk write amplification while the dashboard was
+// open. Samples stay in memory; disk only sees one write per interval.
+internal const val HOME_REALTIME_SPEED_PERSIST_INTERVAL_MS = 15_000L
+
 internal class RealtimeSpeedTracker(
     private val connectionStore: ConnectionStore,
 ) {
@@ -18,6 +23,7 @@ internal class RealtimeSpeedTracker(
     val series = mutableListOf<RealtimeSpeedPoint>()
     private var restored = false
     private var scopeKey: String? = null
+    private var lastPersistAtMs = 0L
 
     suspend fun sampleLocked(
         transferInfo: TransferInfo,
@@ -44,8 +50,20 @@ internal class RealtimeSpeedTracker(
         while (series.size > HOME_REALTIME_SPEED_MAX_POINTS) {
             series.removeAt(0)
         }
-        persistLocked(key, series.toList())
+        val now = nextPoint.timestamp
+        if (now - lastPersistAtMs >= HOME_REALTIME_SPEED_PERSIST_INTERVAL_MS) {
+            lastPersistAtMs = now
+            persistLocked(key, series.toList())
+        }
         return series.toList()
+    }
+
+    /** Flushes the in-memory series to disk immediately (call on app stop/scope switch). */
+    suspend fun flushLocked() {
+        val key = scopeKey ?: return
+        if (!restored) return
+        lastPersistAtMs = System.currentTimeMillis()
+        persistLocked(key, series.toList())
     }
 
     suspend fun clearLocked(key: String) {

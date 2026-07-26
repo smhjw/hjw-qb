@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,6 +40,8 @@ import com.hjw.qbremote.data.AppTheme
 import com.hjw.qbremote.data.ConnectionSettings
 import com.hjw.qbremote.ui.theme.qbGlassCardColors
 import com.hjw.qbremote.ui.theme.qbGlassOutlineColor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 internal fun DrawerThemeItem(
@@ -48,8 +51,13 @@ internal fun DrawerThemeItem(
 ) {
     val context = LocalContext.current
     val saveFailedText = stringResource(R.string.theme_custom_save_failed)
-    val savedImageValid = remember(settings.customBackgroundImagePath) {
-        isCustomBackgroundFileValid(settings.customBackgroundImagePath)
+    val savedImageValid by produceState(
+        initialValue = true,
+        key1 = settings.customBackgroundImagePath,
+    ) {
+        value = withContext(Dispatchers.IO) {
+            isCustomBackgroundFileValid(settings.customBackgroundImagePath)
+        }
     }
     var expanded by rememberSaveable { mutableStateOf(false) }
     var customEditorVisible by rememberSaveable { mutableStateOf(settings.appTheme == AppTheme.CUSTOM) }

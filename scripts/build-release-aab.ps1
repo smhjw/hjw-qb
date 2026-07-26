@@ -1,6 +1,10 @@
 [CmdletBinding()]
 param(
     [switch]$Clean,
+    # Skip the APK if you only need the Play bundle.
+    [switch]$SkipApk,
+    # Root containing jdk17/ and android-sdk/. Overrides auto-detection.
+    [string]$ToolsRoot = "",
     [string]$ExpectedSigningSha256 = ""
 )
 
@@ -9,19 +13,42 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
-$JavaHome = Join-Path $ProjectRoot "tools/android-build/tools/jdk17"
-$AndroidHome = Join-Path $ProjectRoot "tools/android-build/tools/android-sdk"
+# ---------------------------------------------------------------------------
+# Toolchain resolution.
+# The offline toolchain lives outside the repo (e.g. D:\hjw\codex\tools). A
+# candidate is valid when it contains jdk17\ and android-sdk\.
+# ---------------------------------------------------------------------------
+$ToolsCandidates = @()
+if ($ToolsRoot) { $ToolsCandidates += $ToolsRoot }
+if ($env:QBR_TOOLS_DIR) { $ToolsCandidates += $env:QBR_TOOLS_DIR }
+$ToolsCandidates += @(
+    (Join-Path (Split-Path -Parent $ProjectRoot) "tools/android-build/tools"),
+    (Join-Path (Split-Path -Parent $ProjectRoot) "tools")
+)
+
+$ResolvedToolsRoot = $null
+foreach ($candidate in $ToolsCandidates) {
+    if (-not $candidate) { continue }
+    $jdk = Join-Path $candidate "jdk17"
+    $sdk = Join-Path $candidate "android-sdk"
+    if ((Test-Path $jdk) -and (Test-Path $sdk)) {
+        $ResolvedToolsRoot = $candidate
+        break
+    }
+}
+if (-not $ResolvedToolsRoot) {
+    throw ("Android build toolchain not found. Looked for jdk17\ and android-sdk\ under: " +
+        ($ToolsCandidates -join "; ") +
+        ". Pass -ToolsRoot <dir> or set QBR_TOOLS_DIR.")
+}
+
+$JavaHome = Join-Path $ResolvedToolsRoot "jdk17"
+$AndroidHome = Join-Path $ResolvedToolsRoot "android-sdk"
 $AppModuleDir = Join-Path $ProjectRoot "app"
 $KeystorePropertiesPath = Join-Path $ProjectRoot "keystore.properties"
 
-if (!(Test-Path $JavaHome)) {
-    throw "JDK not found: $JavaHome"
-}
-if (!(Test-Path $AndroidHome)) {
-    throw "Android SDK not found: $AndroidHome"
-}
 if (!(Test-Path $KeystorePropertiesPath)) {
-    throw "keystore.properties not found: $KeystorePropertiesPath"
+    throw "keystore.properties not found: $KeystorePropertiesPath (copy keystore.properties.example)"
 }
 
 $env:JAVA_HOME = $JavaHome
@@ -29,6 +56,11 @@ $env:ANDROID_HOME = $AndroidHome
 $env:ANDROID_SDK_ROOT = $AndroidHome
 $env:PATH = "$JavaHome\bin;$AndroidHome\platform-tools;$env:PATH"
 
+Write-Host "Toolchain: $ResolvedToolsRoot"
+
+# ---------------------------------------------------------------------------
+# Signing configuration + fixed-identity guard.
+# ---------------------------------------------------------------------------
 $SigningProps = @{}
 Get-Content -Path $KeystorePropertiesPath | ForEach-Object {
     $line = $_.Trim()
@@ -74,13 +106,21 @@ if (!(Test-Path $Keytool)) {
     throw "keytool not found: $Keytool"
 }
 
-$KeytoolOutput = & $Keytool `
-    -list -v `
-    -keystore $ResolvedStoreFile `
-    -alias $ReleaseKeyAlias `
-    -storepass $ReleaseStorePassword 2>&1
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to read signing certificate from keystore: $ResolvedStoreFile`n$($KeytoolOutput -join [Environment]::NewLine)"
+# Pass the store password via a transient file instead of the command line so it
+# never shows up in the process list.
+$StorePassFile = New-TemporaryFile
+try {
+    Set-Content -Path $StorePassFile -Value $ReleaseStorePassword -NoNewline -Encoding ascii
+    $KeytoolOutput = & $Keytool `
+        -list -v `
+        -keystore $ResolvedStoreFile `
+        -alias $ReleaseKeyAlias `
+        -storepass:file $StorePassFile.FullName 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read signing certificate from keystore: $ResolvedStoreFile`n$($KeytoolOutput -join [Environment]::NewLine)"
+    }
+} finally {
+    Remove-Item -Path $StorePassFile -Force -ErrorAction SilentlyContinue
 }
 
 $Sha256Line = ($KeytoolOutput | Select-String -Pattern "SHA256:\s*(.+)" | Select-Object -First 1)
@@ -107,14 +147,62 @@ if ([string]::IsNullOrWhiteSpace($ExpectedSha256Value)) {
     Write-Host "Signing key SHA256 verified: $ActualSigningSha256"
 }
 
+# ---------------------------------------------------------------------------
+# Build: AAB for Google Play upload + (optionally) the signed release APK.
+# ---------------------------------------------------------------------------
 if ($Clean) {
     .\gradlew.bat clean
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-.\gradlew.bat bundleRelease
+$GradleTasks = @("bundleRelease")
+if (-not $SkipApk) { $GradleTasks += "assembleRelease" }
 
+.\gradlew.bat @GradleTasks
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "AAB generated: app/build/outputs/bundle/release/app-release.aab"
+# ---------------------------------------------------------------------------
+# Collect outputs into dist\ with versioned names.
+# ---------------------------------------------------------------------------
+$VersionName = (Select-String -Path (Join-Path $AppModuleDir "build.gradle.kts") `
+    -Pattern 'versionName\s*=\s*"([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+if ([string]::IsNullOrWhiteSpace($VersionName)) {
+    throw "Failed to parse versionName from app/build.gradle.kts"
+}
+
+$DistDir = Join-Path $ProjectRoot "dist"
+New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
+
+$AabSource = Join-Path $AppModuleDir "build/outputs/bundle/release/app-release.aab"
+$AabTarget = Join-Path $DistDir "qbitremote-v$VersionName.aab"
+Copy-Item -Path $AabSource -Destination $AabTarget -Force
+Write-Host "AAB : $AabTarget"
+
+if (-not $SkipApk) {
+    $ApkSource = Join-Path $AppModuleDir "build/outputs/apk/release/app-release.apk"
+    $ApkTarget = Join-Path $DistDir "qbitremote-v$VersionName.apk"
+    Copy-Item -Path $ApkSource -Destination $ApkTarget -Force
+    Write-Host "APK : $ApkTarget"
+}
+
+$MappingSource = Join-Path $AppModuleDir "build/outputs/mapping/release/mapping.txt"
+$MappingTarget = Join-Path $DistDir "mapping-v$VersionName.txt"
+if (Test-Path $MappingSource) {
+    Copy-Item -Path $MappingSource -Destination $MappingTarget -Force
+    Write-Host "MAP : $MappingTarget (upload to Play Console for crash deobfuscation)"
+}
+
+# SHA256 manifest for all dist outputs of this version.
+$ChecksumTargets = @($AabTarget)
+if (-not $SkipApk) { $ChecksumTargets += $ApkTarget }
+if (Test-Path $MappingSource) { $ChecksumTargets += $MappingTarget }
+$ManifestPath = Join-Path $DistDir "SHA256SUMS-v$VersionName.txt"
+$ChecksumTargets | ForEach-Object {
+    $h = (Get-FileHash -Path $_ -Algorithm SHA256).Hash.ToLowerInvariant()
+    "{0}  {1}" -f $h, (Split-Path -Leaf $_)
+} | Set-Content -Path $ManifestPath -Encoding ascii
+Write-Host "SUM : $ManifestPath"
+
+Write-Host "Done. dist\ outputs are gitignored - distribute via GitHub Releases / Play Console."

@@ -13,19 +13,40 @@ class DashboardReorderRefreshHoldSupportTest {
         assertTrue(
             shouldSkipRefreshForDashboardReorderHold(
                 heldProfileId = "tr-1",
+                holdAllProfiles = false,
                 profileId = "tr-1",
             ),
         )
         assertFalse(
             shouldSkipRefreshForDashboardReorderHold(
                 heldProfileId = "tr-1",
+                holdAllProfiles = false,
                 profileId = "qb-1",
             ),
         )
         assertFalse(
             shouldSkipRefreshForDashboardReorderHold(
                 heldProfileId = null,
+                holdAllProfiles = false,
                 profileId = "tr-1",
+            ),
+        )
+    }
+
+    @Test
+    fun shouldSkipRefreshForDashboardReorderHold_holdAllProfilesSkipsEveryProfile() {
+        assertTrue(
+            shouldSkipRefreshForDashboardReorderHold(
+                heldProfileId = null,
+                holdAllProfiles = true,
+                profileId = "tr-1",
+            ),
+        )
+        assertTrue(
+            shouldSkipRefreshForDashboardReorderHold(
+                heldProfileId = "tr-1",
+                holdAllProfiles = true,
+                profileId = "qb-1",
             ),
         )
     }

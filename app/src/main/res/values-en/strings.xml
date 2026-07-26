@@ -1,11 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TorrentRemote</string>
-    <string name="widget_title">TorrentRemote</string>
-    <string name="widget_description">Show upload/download speed and torrent count</string>
-    <string name="widget_torrents">torrents</string>
     <string name="notification_channel_torrent">Torrent Status</string>
     <string name="notification_torrent_completed">Torrent download completed</string>
+    <string name="notification_torrent_completed_detail">%1$s: %2$s finished downloading</string>
 
     <string name="menu_settings">Settings</string>
     <string name="menu_servers">Servers</string>
@@ -26,6 +24,7 @@
     <string name="theme_custom_save_failed">Failed to save background image</string>
     <string name="back">Back</string>
     <string name="go_to_settings">Go to settings</string>
+    <string name="retry">Retry</string>
 
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>
@@ -35,6 +34,9 @@
     <string name="settings_language_apply_hint">Select a language, then tap "Save" to apply immediately</string>
     <string name="settings_delete_when_no_seeders">Preselect delete files when no seeders</string>
     <string name="settings_delete_by_default">Preselect delete files on delete</string>
+    <string name="settings_completion_notifications">Torrent completion notifications</string>
+    <string name="settings_notification_permission_denied">Notification permission is off, completion alerts cannot be shown</string>
+    <string name="settings_open_notification_settings">Open notification settings</string>
 
     <string name="connect_first_hint">Connect to a server first.</string>
     <string name="connection_title">Connection Settings</string>
@@ -48,6 +50,7 @@
     <string name="password_visibility_show">Show password</string>
     <string name="password_visibility_hide">Hide password</string>
     <string name="connection_https_label">HTTPS</string>
+    <string name="settings_cleartext_public_warning">Connecting to a public address over unencrypted HTTP; credentials may be intercepted. Enable HTTPS.</string>
     <string name="connect">Connect</string>
     <string name="connecting">Connecting…</string>
 
@@ -75,20 +78,11 @@
     <string name="dashboard_torrent_state_share_title">Torrent State Share</string>
     <string name="dashboard_tracker_site_share_title">Tracker Site Share</string>
     <string name="dashboard_tracker_site_unknown">Unknown site</string>
+    <string name="dashboard_tracker_site_none">No tracker</string>
     <string name="dashboard_open_torrents">Torrents</string>
     <string name="dashboard_open_torrents_hint">Tap here</string>
     <string name="dashboard_country_flow_title">Today\'s Observed Upload Distribution</string>
     <string name="dashboard_country_flow_empty">No observable country upload data yet for today.</string>
-    <string name="dashboard_country_flow_note">Based only on observed peer upload deltas from active connections, so it may be lower than the actual full-day upload total.</string>
-    <string name="chart_size_bucket_under_one_gb">&lt;1 GB</string>
-    <string name="chart_size_bucket_one_to_ten_gb">1–10 GB</string>
-    <string name="chart_size_bucket_ten_to_fifty_gb">10–50 GB</string>
-    <string name="chart_size_bucket_fifty_plus_gb">50+ GB</string>
-    <string name="chart_ratio_bucket_under_half">&lt;0.5</string>
-    <string name="chart_ratio_bucket_half_to_one">0.5–1</string>
-    <string name="chart_ratio_bucket_one_to_two">1–2</string>
-    <string name="chart_ratio_bucket_two_to_five">2–5</string>
-    <string name="chart_ratio_bucket_five_plus">5+</string>
     <string name="dismiss_hint">Dismiss hint</string>
 
     <string name="status_uploading">Uploading</string>
@@ -242,6 +236,39 @@
     <string name="dashboard_all_cards_hidden_title">All chart cards are hidden</string>
     <string name="dashboard_all_cards_hidden_body">Open card management to show them again.</string>
     <string name="close">Close</string>
+
+    <string name="global_speed_limit_action">Speed limits</string>
+    <string name="global_speed_limit_title">Global speed limits</string>
+    <string name="global_speed_limit_server_label">Server</string>
+    <string name="global_speed_limit_load_failed">Failed to load speed limits</string>
+    <string name="global_speed_limit_normal_section">Normal limits</string>
+    <string name="global_speed_limit_alternative_section">Alternative limits</string>
+    <string name="global_speed_limit_download_label">Download limit (KiB/s)</string>
+    <string name="global_speed_limit_upload_label">Upload limit (KiB/s)</string>
+    <string name="global_speed_limit_alternative_download_label">Alt download limit (KiB/s)</string>
+    <string name="global_speed_limit_alternative_upload_label">Alt upload limit (KiB/s)</string>
+    <string name="global_speed_limit_unlimited_hint">0 or empty means unlimited</string>
+    <string name="global_speed_limit_mode_normal">Normal limits are active now</string>
+    <string name="global_speed_limit_mode_alternative">Alternative limits are active now</string>
+    <string name="global_speed_limit_mode_unknown">Current limit mode unknown</string>
+    <string name="global_speed_limit_schedule_title">Schedule alternative limits</string>
+    <string name="global_speed_limit_schedule_desc">Apply alternative limits on a schedule</string>
+    <string name="global_speed_limit_schedule_start">Start time</string>
+    <string name="global_speed_limit_schedule_end">End time</string>
+    <string name="global_speed_limit_schedule_hour">Hour</string>
+    <string name="global_speed_limit_schedule_minute">Minute</string>
+    <string name="global_speed_limit_schedule_day">Days</string>
+    <string name="global_speed_limit_day_every_day">Every day</string>
+    <string name="global_speed_limit_day_weekdays">Weekdays</string>
+    <string name="global_speed_limit_day_weekends">Weekends</string>
+    <string name="global_speed_limit_day_monday">Monday</string>
+    <string name="global_speed_limit_day_tuesday">Tuesday</string>
+    <string name="global_speed_limit_day_wednesday">Wednesday</string>
+    <string name="global_speed_limit_day_thursday">Thursday</string>
+    <string name="global_speed_limit_day_friday">Friday</string>
+    <string name="global_speed_limit_day_saturday">Saturday</string>
+    <string name="global_speed_limit_day_sunday">Sunday</string>
+    <string name="error_speed_limit_invalid">Enter a value between 0 and 2147483647 KiB/s</string>
 
     <string name="detail_section_name">Name</string>
     <string name="detail_new_name_label">New name</string>

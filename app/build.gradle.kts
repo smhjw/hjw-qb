@@ -4,7 +4,6 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("androidx.baselineprofile")
 }
 
 val keystoreProperties = Properties().apply {
@@ -32,14 +31,14 @@ val hasReleaseSigningConfig = !releaseStoreFilePath.isNullOrBlank() &&
 
 android {
     namespace = "com.hjw.qbremote"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.hjw.qbremote"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 16
-        versionName = "0.1.15"
+        targetSdk = 36
+        versionCode = 22
+        versionName = "0.1.21"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -60,8 +59,13 @@ android {
             isShrinkResources = false
         }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8 + resource shrinking: roughly halves APK size and restores
+            // mapping.txt for Play crash deobfuscation. The Gson/Retrofit
+            // reflection surface is pinned in proguard-rules.pro; if a release
+            // build ever crashes at startup again, fix the specific keep rule
+            // there instead of turning minification back off.
+            isMinifyEnabled = true
+            isShrinkResources = true
             if (hasReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -99,21 +103,29 @@ android {
     }
 
     lint {
-        // Newer AndroidX releases in lint currently require migrating the whole toolchain
-        // to AGP 8.9.1+ and compileSdk 36. We intentionally pin these dependencies until
-        // that broader upgrade is planned and validated end-to-end.
+        // Dependency versions are pinned deliberately; bump them as coordinated
+        // upgrades, not one-off lint suggestions.
         disable += "GradleDependency"
     }
 }
 
-val releaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
-    taskName.contains("Release", ignoreCase = true)
+// Fail fast only for tasks that actually produce shippable release artifacts.
+// lintRelease / testReleaseUnitTest etc. must stay runnable without a keystore,
+// and CI may build unsigned release artifacts to validate the R8 configuration.
+val signedReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.substringAfterLast(":").let { name ->
+        name.equals("assembleRelease", ignoreCase = true) ||
+            name.equals("bundleRelease", ignoreCase = true)
+    }
 }
-if (releaseTaskRequested && !hasReleaseSigningConfig) {
+val allowUnsignedRelease =
+    providers.environmentVariable("QBR_ALLOW_UNSIGNED_RELEASE").orNull == "1"
+if (signedReleaseTaskRequested && !hasReleaseSigningConfig && !allowUnsignedRelease) {
     throw GradleException(
         "Release signing config is missing. " +
             "Create keystore.properties from keystore.properties.example " +
-            "or pass RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD."
+            "or pass RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD. " +
+            "(CI can set QBR_ALLOW_UNSIGNED_RELEASE=1 to build unsigned release artifacts.)"
     )
 }
 
@@ -130,25 +142,25 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.1")
 
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("androidx.security:security-crypto:1.1.0")
     implementation("com.google.errorprone:error_prone_annotations:2.28.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    baselineProfile(project(":benchmark"))
 }
 

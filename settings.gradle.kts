@@ -16,4 +16,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "QBRemote"
 include(":app")
-include(":benchmark")

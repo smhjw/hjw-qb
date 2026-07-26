@@ -29,7 +29,7 @@ class ServerDashboardDisplaySelectorSupportTest {
         )
 
         val changed = base.copy(
-            errorMessage = "network error",
+            errorMessage = UiMessage.Text("network error"),
             detailHash = "hash-1",
             pendingActionKeys = setOf("alpha|hash-1"),
             isConnecting = true,

@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -257,6 +258,46 @@ class TransmissionBackend : TorrentBackend {
         )
     }
 
+    override suspend fun fetchGlobalSpeedLimits(): Result<GlobalSpeedLimits> = runCatching {
+        val session = requireClient().sessionGet()
+        GlobalSpeedLimits(
+            downloadLimitKb = if (session.speedLimitDownEnabled) {
+                session.speedLimitDown.toLong().coerceAtLeast(0L)
+            } else {
+                0L
+            },
+            uploadLimitKb = if (session.speedLimitUpEnabled) {
+                session.speedLimitUp.toLong().coerceAtLeast(0L)
+            } else {
+                0L
+            },
+            alternativeDownloadLimitKb = session.altSpeedDown.toLong().coerceAtLeast(0L),
+            alternativeUploadLimitKb = session.altSpeedUp.toLong().coerceAtLeast(0L),
+            schedulerEnabled = session.altSpeedTimeEnabled,
+            scheduleStartMinutes = session.altSpeedTimeBegin.coerceIn(0, 1439),
+            scheduleEndMinutes = session.altSpeedTimeEnd.coerceIn(0, 1439),
+            scheduleDayPreset = ScheduleDayPreset.fromTransmissionDayMask(session.altSpeedTimeDay),
+            alternativeModeEnabled = session.altSpeedEnabled,
+        )
+    }
+
+    override suspend fun setGlobalSpeedLimits(limits: GlobalSpeedLimits): Result<Unit> = runCatching {
+        requireClient().sessionSet(
+            buildJsonObject(
+                "speed-limit-down-enabled" to (limits.downloadLimitKb > 0L),
+                "speed-limit-down" to limits.downloadLimitKb.toInt(),
+                "speed-limit-up-enabled" to (limits.uploadLimitKb > 0L),
+                "speed-limit-up" to limits.uploadLimitKb.toInt(),
+                "alt-speed-down" to limits.alternativeDownloadLimitKb.toInt(),
+                "alt-speed-up" to limits.alternativeUploadLimitKb.toInt(),
+                "alt-speed-time-enabled" to limits.schedulerEnabled,
+                "alt-speed-time-begin" to limits.scheduleStartMinutes,
+                "alt-speed-time-end" to limits.scheduleEndMinutes,
+                "alt-speed-time-day" to limits.scheduleDayPreset.transmissionDayMask,
+            ),
+        )
+    }
+
     override suspend fun addTorrent(request: AddTorrentRequest): Result<Unit> = runCatching {
         require(request.urls.isNotBlank() || request.files.isNotEmpty()) {
             "Please provide a torrent URL or file."
@@ -378,7 +419,20 @@ class TransmissionBackend : TorrentBackend {
         } else {
             null
         }
-        private val client = okHttpClient
+
+        // RPC-specific transport hardening: redirects must not be followed
+        // (OkHttp turns a redirected POST into a GET and lands on the web UI,
+        // which then parses as an HTML "response"), and some reverse proxies
+        // in front of transmission-daemon mangle HTTP/2 POST bodies, so pin
+        // the RPC channel to HTTP/1.1.
+        private val client = okHttpClient.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .build()
+
+        // Read/written from different Dispatchers.IO threads across requests.
+        @Volatile
         private var selectedUrl: String? = null
 
         private fun buildJsonObject(vararg pairs: Pair<String, Any?>): JsonObject {
@@ -389,6 +443,7 @@ class TransmissionBackend : TorrentBackend {
             }
             return result
         }
+        @Volatile
         private var sessionId: String? = null
         private var probeResult: TransmissionRpcProbeResult? = null
 
@@ -411,9 +466,20 @@ class TransmissionBackend : TorrentBackend {
                         "speed-limit-down",
                         "speed-limit-up-enabled",
                         "speed-limit-up",
+                        "alt-speed-down",
+                        "alt-speed-up",
+                        "alt-speed-enabled",
+                        "alt-speed-time-enabled",
+                        "alt-speed-time-begin",
+                        "alt-speed-time-end",
+                        "alt-speed-time-day",
                     ),
                 ),
             ).asTransmissionSessionInfo()
+        }
+
+        suspend fun sessionSet(arguments: JsonObject) {
+            rpc(method = "session-set", arguments = arguments)
         }
 
         suspend fun sessionStats(): TransmissionSessionStats {
@@ -569,6 +635,7 @@ class TransmissionBackend : TorrentBackend {
         private fun executeStreamed(
             url: String,
             bodyJson: String,
+            handshakeAttempt: Int = 0,
         ): Pair<List<TransmissionTorrent>, Int> {
             val mediaType = "application/json".toMediaType()
             var requestBuilder = Request.Builder()
@@ -592,8 +659,17 @@ class TransmissionBackend : TorrentBackend {
                             summary = "Session handshake failed (409 without session id).",
                         )
                     }
+                    // Per the RPC spec one retry with the refreshed session id must
+                    // succeed; bound it so a proxy that always answers 409 with a new
+                    // id cannot recurse forever.
+                    if (handshakeAttempt >= MAX_SESSION_HANDSHAKE_RETRIES) {
+                        throw TransmissionRpcAttemptException(
+                            url = url,
+                            summary = "Session handshake did not converge (repeated 409).",
+                        )
+                    }
                     sessionId = newSessionId
-                    return executeStreamed(url, bodyJson)
+                    return executeStreamed(url, bodyJson, handshakeAttempt + 1)
                 }
                 if (response.code == 401 || response.code == 403) {
                     throw TransmissionRpcAttemptException(
@@ -607,6 +683,8 @@ class TransmissionBackend : TorrentBackend {
                     throw TransmissionRpcAttemptException(
                         url = url,
                         summary = when {
+                            response.isRedirect ->
+                                "Redirected to ${response.header("Location").orEmpty().ifBlank { "unknown location" }} (HTTP ${response.code})."
                             looksLikeHtml(preview) -> "Invalid HTML response (HTTP ${response.code})."
                             preview.isBlank() -> "HTTP ${response.code}."
                             else -> "HTTP ${response.code}: ${summarizeResponseText(preview, maxChars = 120)}"
@@ -759,6 +837,7 @@ class TransmissionBackend : TorrentBackend {
         private fun <T> execute(
             url: String,
             bodyJson: String,
+            handshakeAttempt: Int = 0,
             parser: (Response, String) -> T,
         ): T {
             val mediaType = "application/json".toMediaType()
@@ -783,8 +862,17 @@ class TransmissionBackend : TorrentBackend {
                             summary = "Session handshake failed (409 without session id).",
                         )
                     }
+                    // Per the RPC spec one retry with the refreshed session id must
+                    // succeed; bound it so a proxy that always answers 409 with a new
+                    // id cannot recurse forever.
+                    if (handshakeAttempt >= MAX_SESSION_HANDSHAKE_RETRIES) {
+                        throw TransmissionRpcAttemptException(
+                            url = url,
+                            summary = "Session handshake did not converge (repeated 409).",
+                        )
+                    }
                     sessionId = newSessionId
-                    return execute(url, bodyJson, parser)
+                    return execute(url, bodyJson, handshakeAttempt + 1, parser)
                 }
                 if (response.code == 401 || response.code == 403) {
                     throw TransmissionRpcAttemptException(
@@ -798,6 +886,8 @@ class TransmissionBackend : TorrentBackend {
                     throw TransmissionRpcAttemptException(
                         url = url,
                         summary = when {
+                            response.isRedirect ->
+                                "Redirected to ${response.header("Location").orEmpty().ifBlank { "unknown location" }} (HTTP ${response.code})."
                             looksLikeHtml(preview) -> "Invalid HTML response (HTTP ${response.code})."
                             preview.isBlank() -> "HTTP ${response.code}."
                             else -> "HTTP ${response.code}: ${summarizeResponseText(preview, maxChars = 120)}"
@@ -831,13 +921,15 @@ class TransmissionBackend : TorrentBackend {
                     summary = "Empty response body.",
                 )
             }
-            val root = runCatching { JsonParser.parseString(payload).asJsonObject }.getOrElse {
+            val root = runCatching {
+                JsonParser.parseString(payload.removePrefix("\uFEFF").trim()).asJsonObject
+            }.getOrElse {
                 throw TransmissionRpcAttemptException(
                     url = url,
-                    summary = if (looksLikeHtml(preview)) {
-                        "Invalid HTML response."
-                    } else {
-                        "Non-JSON response."
+                    summary = when {
+                        looksLikeHtml(preview) -> "Invalid HTML response."
+                        preview.isBlank() -> "Empty response body."
+                        else -> "Non-JSON response: ${summarizeResponseText(preview, maxChars = 80)}"
                     },
                 )
             }
@@ -869,10 +961,10 @@ class TransmissionBackend : TorrentBackend {
             }.getOrElse {
                 throw TransmissionRpcAttemptException(
                     url = url,
-                    summary = if (looksLikeHtml(preview)) {
-                        "Invalid HTML response."
-                    } else {
-                        "Non-JSON response."
+                    summary = when {
+                        looksLikeHtml(preview) -> "Invalid HTML response."
+                        preview.isBlank() -> "Empty response body."
+                        else -> "Non-JSON response: ${summarizeResponseText(preview, maxChars = 80)}"
                     },
                 )
             } ?: throw TransmissionRpcAttemptException(
@@ -1005,22 +1097,6 @@ class TransmissionBackend : TorrentBackend {
         return result
     }
 
-    private fun mapTransmissionState(
-        status: Int,
-        percentDone: Double,
-        isFinished: Boolean,
-    ): String {
-        return when (status) {
-            0 -> if (isFinished || percentDone >= 1.0) "pausedUP" else "pausedDL"
-            1, 2 -> "checkUP"
-            3 -> "queuedDL"
-            4 -> "downloading"
-            5 -> "queuedUP"
-            6 -> "uploading"
-            else -> if (percentDone >= 1.0) "pausedUP" else "pausedDL"
-        }
-    }
-
     companion object {
         private val DETAIL_FIELDS = listOf(
             "hashString",
@@ -1058,6 +1134,7 @@ class TransmissionBackend : TorrentBackend {
         )
 
         private const val RESPONSE_PREVIEW_BYTES = 4_096L
+        private const val MAX_SESSION_HANDSHAKE_RETRIES = 1
 
         private val sharedOkHttpClient by lazy {
             OkHttpClient.Builder()
@@ -1066,6 +1143,22 @@ class TransmissionBackend : TorrentBackend {
                 .writeTimeout(18, TimeUnit.SECONDS)
                 .build()
         }
+    }
+}
+
+internal fun mapTransmissionState(
+    status: Int,
+    percentDone: Double,
+    isFinished: Boolean,
+): String {
+    return when (status) {
+        0 -> if (isFinished || percentDone >= 1.0) "pausedUP" else "pausedDL"
+        1, 2 -> "checkUP"
+        3 -> "queuedDL"
+        4 -> "downloading"
+        5 -> "queuedUP"
+        6 -> "uploading"
+        else -> if (percentDone >= 1.0) "pausedUP" else "pausedDL"
     }
 }
 
@@ -1204,48 +1297,6 @@ internal fun buildTransmissionRpcUrlCandidates(baseUrls: List<String>): List<Str
         .distinct()
 }
 
-internal fun resolveTransmissionRenamePath(currentTorrentName: String): String {
-    return currentTorrentName.trim()
-        .takeIf { it.isNotBlank() }
-        ?: throw IllegalArgumentException("Current torrent name is missing.")
-}
-
-internal fun buildTransmissionAddTorrentArguments(
-    request: AddTorrentRequest,
-    common: MutableMap<String, Any?>,
-): JsonObject {
-    val labels = request.tags
-        .split(',', ';', '|')
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-        .distinct()
-
-    if (request.savePath.isNotBlank()) {
-        common["download-dir"] = request.savePath.trim()
-    }
-    if (request.paused) {
-        common["paused"] = true
-    }
-    if (labels.isNotEmpty()) {
-        common["labels"] = labels
-    }
-    if (request.uploadLimitBytes >= 0L) {
-        val uploadLimitKb = transmissionLimitKilobytes(request.uploadLimitBytes)
-        common["uploadLimited"] = uploadLimitKb > 0
-        common["uploadLimit"] = uploadLimitKb
-    }
-    if (request.downloadLimitBytes >= 0L) {
-        val downloadLimitKb = transmissionLimitKilobytes(request.downloadLimitBytes)
-        common["downloadLimited"] = downloadLimitKb > 0
-        common["downloadLimit"] = downloadLimitKb
-    }
-    return Gson().toJsonTree(common).asJsonObject
-}
-
-private fun transmissionLimitKilobytes(bytes: Long): Int {
-    return (bytes / 1024L).toInt().coerceAtLeast(0)
-}
-
 private data class RpcAttemptFailure(
     val url: String,
     val summary: String,
@@ -1265,6 +1316,13 @@ internal data class TransmissionSessionInfo(
     @SerializedName("speed-limit-down") val speedLimitDown: Int = 0,
     @SerializedName("speed-limit-up-enabled") val speedLimitUpEnabled: Boolean = false,
     @SerializedName("speed-limit-up") val speedLimitUp: Int = 0,
+    @SerializedName("alt-speed-down") val altSpeedDown: Int = 0,
+    @SerializedName("alt-speed-up") val altSpeedUp: Int = 0,
+    @SerializedName("alt-speed-enabled") val altSpeedEnabled: Boolean = false,
+    @SerializedName("alt-speed-time-enabled") val altSpeedTimeEnabled: Boolean = false,
+    @SerializedName("alt-speed-time-begin") val altSpeedTimeBegin: Int = 0,
+    @SerializedName("alt-speed-time-end") val altSpeedTimeEnd: Int = 0,
+    @SerializedName("alt-speed-time-day") val altSpeedTimeDay: Int = 0x7F,
 )
 
 internal data class TransmissionSessionStats(

@@ -4,6 +4,14 @@ build/
 */build/
 .idea/
 *.iml
+.kotlin/
+captures/
+
+# Binary artifacts belong in GitHub Releases, never in git
+*.apk
+*.aab
+dist/
+release-artifacts/
 
 # Local machine config
 local.properties
@@ -17,6 +25,7 @@ keystore.properties
 # Local assistant/work dirs
 .cowork-temp/
 .gradle-user/
+.claude/
 
 # Local offline toolchain cache (do not commit)
 tools/

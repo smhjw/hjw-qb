@@ -85,6 +85,8 @@ interface TorrentBackend {
     suspend fun setTorrentCategory(hash: String, category: String): Result<Unit>
     suspend fun setTorrentTags(hash: String, oldTags: String, newTags: String): Result<Unit>
     suspend fun setTorrentSpeedLimit(hash: String, downloadLimitBytes: Long, uploadLimitBytes: Long): Result<Unit>
+    suspend fun fetchGlobalSpeedLimits(): Result<GlobalSpeedLimits>
+    suspend fun setGlobalSpeedLimits(limits: GlobalSpeedLimits): Result<Unit>
     suspend fun setTorrentShareRatio(hash: String, ratioLimit: Double): Result<Unit>
     suspend fun addTorrent(request: com.hjw.qbremote.data.model.AddTorrentRequest): Result<Unit>
 }

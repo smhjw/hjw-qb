@@ -149,7 +149,7 @@ class DashboardRealtimeSpeedSupportTest {
         maxPoints: Int,
     ): List<RealtimeSpeedPoint> {
         return invokeStaticRealtimePointsFunction(
-            containerClassName = "com.hjw.qbremote.ui.MainViewModelKt",
+            containerClassName = "com.hjw.qbremote.ui.MainViewModelStateSupportKt",
             functionName = "restoreHomeRealtimeSpeedSeries",
             parameterTypes = arrayOf(
                 HomeAggregateSpeedHistorySnapshot::class.java,

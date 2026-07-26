@@ -41,15 +41,6 @@ internal fun saveCustomBackgroundSelection(
         "${CUSTOM_THEME_FILE_PREFIX}_${System.currentTimeMillis()}$extension",
     )
 
-    targetDirectory.listFiles()
-        .orEmpty()
-        .filter { candidate ->
-            candidate.isFile &&
-                candidate.name.startsWith(CUSTOM_THEME_FILE_PREFIX) &&
-                candidate.absolutePath != targetFile.absolutePath
-        }
-        .forEach { it.delete() }
-
     context.contentResolver.openInputStream(sourceUri)?.use { input ->
         targetFile.outputStream().use { output ->
             input.copyTo(output)
@@ -61,6 +52,18 @@ internal fun saveCustomBackgroundSelection(
         filePath = targetFile.absolutePath,
         toneIsLight = toneIsLight,
     )
+}
+
+internal fun cleanupStaleCustomBackgrounds(context: Context, keepAbsolutePath: String) {
+    val targetDirectory = File(context.filesDir, CUSTOM_THEME_DIR)
+    targetDirectory.listFiles()
+        .orEmpty()
+        .filter { candidate ->
+            candidate.isFile &&
+                candidate.name.startsWith(CUSTOM_THEME_FILE_PREFIX) &&
+                candidate.absolutePath != keepAbsolutePath
+        }
+        .forEach { it.delete() }
 }
 
 internal fun isCustomBackgroundFileValid(path: String): Boolean {

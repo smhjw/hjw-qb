@@ -56,6 +56,7 @@ internal data class TorrentListDisplayState(
     val torrentListBaseSnapshot: TorrentListBaseSnapshot = TorrentListBaseSnapshot(),
     val torrentListFilterState: TorrentListFilterState = TorrentListFilterState(),
     val visibleTorrentItems: List<VisibleTorrentItem> = emptyList(),
+    val emptyState: TorrentListEmptyState = TorrentListEmptyState.NONE,
 )
 
 private data class CrossSeedGroupKey(
@@ -204,5 +205,10 @@ internal fun buildTorrentListDisplayState(
         ),
         torrentListFilterState = filterState,
         visibleTorrentItems = visibleItems,
+        emptyState = resolveTorrentListEmptyState(
+            hasTorrents = torrents.isNotEmpty(),
+            visibleCount = visibleItems.size,
+            filterState = filterState,
+        ),
     )
 }

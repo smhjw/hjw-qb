@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.hjw.qbremote.R
+import com.hjw.qbremote.data.model.TorrentInfo
 
 @Immutable
 internal data class DashboardDisplayCardItem(
@@ -32,7 +33,43 @@ internal fun dashboardChartCardLabel(card: DashboardChartCard): String {
         DashboardChartCard.TAG_UPLOAD -> stringResource(R.string.dashboard_tag_upload_share_title)
         DashboardChartCard.TORRENT_STATE -> stringResource(R.string.dashboard_torrent_state_share_title)
         DashboardChartCard.TRACKER_SITE -> stringResource(R.string.dashboard_tracker_site_share_title)
+        DashboardChartCard.SIZE_DISTRIBUTION ->
+            stringResource(R.string.dashboard_size_distribution_title)
+        DashboardChartCard.SHARE_RATIO_DISTRIBUTION ->
+            stringResource(R.string.dashboard_share_ratio_distribution_title)
     }
+}
+
+@Immutable
+internal data class ShareRatioDistributionDisplay(
+    val bucketCounts: List<Int> = emptyList(),
+    val belowOneCount: Int = 0,
+    val totalCount: Int = 0,
+    val medianRatio: Double = 0.0,
+)
+
+internal fun buildShareRatioDistributionDisplay(
+    torrents: List<TorrentInfo>,
+): ShareRatioDistributionDisplay {
+    if (torrents.isEmpty()) return ShareRatioDistributionDisplay()
+    val ratios = torrents.map { it.ratio.coerceAtLeast(0.0) }.sorted()
+    val bucketCounts = listOf(
+        ratios.count { it < 1.0 },
+        ratios.count { it >= 1.0 && it < 2.0 },
+        ratios.count { it >= 2.0 && it < 5.0 },
+        ratios.count { it >= 5.0 },
+    )
+    val medianRatio = if (ratios.size % 2 == 1) {
+        ratios[ratios.size / 2]
+    } else {
+        (ratios[ratios.size / 2 - 1] + ratios[ratios.size / 2]) / 2.0
+    }
+    return ShareRatioDistributionDisplay(
+        bucketCounts = bucketCounts,
+        belowOneCount = bucketCounts.first(),
+        totalCount = ratios.size,
+        medianRatio = medianRatio,
+    )
 }
 
 internal fun parseDashboardCardOrder(
@@ -63,27 +100,6 @@ internal fun serializeDashboardCardOrder(
         order.joinToString(",") { it.storageKey },
         availableCards,
     ).joinToString(",") { it.storageKey }
-}
-
-internal fun reorderDashboardCardOrder(
-    order: List<DashboardChartCard>,
-    visibleCards: List<DashboardChartCard>,
-    card: DashboardChartCard,
-    targetIndex: Int,
-): List<DashboardChartCard> {
-    val currentVisibleIndex = visibleCards.indexOf(card)
-    if (currentVisibleIndex < 0 || targetIndex !in visibleCards.indices || currentVisibleIndex == targetIndex) {
-        return order
-    }
-
-    val reorderedVisibleCards = visibleCards.toMutableList().apply {
-        removeAt(currentVisibleIndex)
-        add(targetIndex, card)
-    }
-    val reorderedVisibleIter = reorderedVisibleCards.iterator()
-    return order.map { current ->
-        if (current in visibleCards) reorderedVisibleIter.next() else current
-    }
 }
 
 internal fun buildDashboardDisplayCards(

@@ -1,6 +1,7 @@
 package com.hjw.qbremote.ui
 
 import com.hjw.qbremote.data.AppTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.lang.reflect.Method
@@ -27,6 +28,34 @@ class MainScreenThemeSupportTest {
 
         assertNotEquals(dark, light)
         assertNotEquals(light, custom)
+    }
+
+    @Test
+    fun resolveEffectiveAppTheme_fallsBackToDarkWhenCustomBackgroundUnavailable() {
+        assertEquals(
+            AppTheme.DARK,
+            resolveEffectiveAppTheme(appTheme = AppTheme.CUSTOM, customBackgroundAvailable = false),
+        )
+    }
+
+    @Test
+    fun resolveEffectiveAppTheme_keepsCustomWhenBackgroundAvailable() {
+        assertEquals(
+            AppTheme.CUSTOM,
+            resolveEffectiveAppTheme(appTheme = AppTheme.CUSTOM, customBackgroundAvailable = true),
+        )
+    }
+
+    @Test
+    fun resolveEffectiveAppTheme_passesThroughDarkAndLight() {
+        assertEquals(
+            AppTheme.DARK,
+            resolveEffectiveAppTheme(appTheme = AppTheme.DARK, customBackgroundAvailable = false),
+        )
+        assertEquals(
+            AppTheme.LIGHT,
+            resolveEffectiveAppTheme(appTheme = AppTheme.LIGHT, customBackgroundAvailable = false),
+        )
     }
 
     private fun invokeBuildPageThemeSignature(

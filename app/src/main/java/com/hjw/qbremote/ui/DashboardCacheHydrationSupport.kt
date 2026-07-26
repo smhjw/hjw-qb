@@ -36,6 +36,24 @@ internal fun applyDashboardCacheHydration(
     }
 }
 
+internal fun buildDashboardCacheSnapshot(state: MainUiState): DashboardCacheSnapshot {
+    return DashboardCacheSnapshot(
+        transferInfo = state.transferInfo,
+        torrents = state.torrents,
+        dailyTagUploadDate = state.dailyTagUploadDate,
+        dailyTagUploadStats = state.dailyTagUploadStats.map { stat ->
+            CachedDailyTagUploadStat(
+                tag = stat.tag,
+                uploadedBytes = stat.uploadedBytes,
+                torrentCount = stat.torrentCount,
+                isNoTag = stat.isNoTag,
+            )
+        },
+        dailyCountryUploadDate = state.dailyCountryUploadDate,
+        dailyCountryUploadStats = state.dailyCountryUploadStats,
+    )
+}
+
 private fun CachedDailyTagUploadStat.toDailyTagUploadStat(): DailyTagUploadStat {
     return DailyTagUploadStat(
         tag = tag,

@@ -1,7 +1,5 @@
 package com.hjw.qbremote.ui
 
-import com.hjw.qbremote.data.CachedDashboardServerSnapshot
-import com.hjw.qbremote.data.ServerBackendType
 import com.hjw.qbremote.data.model.TransferInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,54 +14,6 @@ class HomeDashboardSpeedRefreshSupportTest {
         assertNull(resolveHomeSpeedRefreshIntervalSeconds(RefreshScene.SERVER))
         assertNull(resolveHomeSpeedRefreshIntervalSeconds(RefreshScene.TORRENT_DETAIL))
         assertNull(resolveHomeSpeedRefreshIntervalSeconds(RefreshScene.SETTINGS))
-    }
-
-    @Test
-    fun mergeTransferInfoIntoDashboardSnapshots_updatesOnlyTransferFields() {
-        val original = listOf(
-            CachedDashboardServerSnapshot(
-                profileId = "a",
-                profileName = "Alpha",
-                backendType = ServerBackendType.QBITTORRENT,
-                host = "alpha.local",
-                port = 8080,
-                useHttps = true,
-                serverVersion = "1.0",
-                transferInfo = TransferInfo(uploadSpeed = 1L, downloadSpeed = 2L, uploadedTotal = 3L),
-                lastUpdatedAt = 1_000L,
-                errorMessage = "stale",
-                isStale = true,
-            ),
-            CachedDashboardServerSnapshot(
-                profileId = "b",
-                profileName = "Beta",
-                backendType = ServerBackendType.TRANSMISSION,
-                host = "beta.local",
-                port = 9091,
-                useHttps = false,
-                serverVersion = "2.0",
-                transferInfo = TransferInfo(uploadSpeed = 3L, downloadSpeed = 4L, uploadedTotal = 5L),
-                lastUpdatedAt = 2_000L,
-            ),
-        )
-
-        val merged = mergeTransferInfoIntoDashboardSnapshots(
-            snapshots = original,
-            transferInfoByProfileId = mapOf(
-                "a" to TransferInfo(uploadSpeed = 9L, downloadSpeed = 10L, uploadedTotal = 11L),
-            ),
-        )
-
-        val updatedAlpha = merged.first { it.profileId == "a" }
-        val untouchedBeta = merged.first { it.profileId == "b" }
-
-        assertEquals(listOf("a", "b"), merged.map { it.profileId })
-        assertEquals(9L, updatedAlpha.transferInfo.uploadSpeed)
-        assertEquals(10L, updatedAlpha.transferInfo.downloadSpeed)
-        assertEquals(11L, updatedAlpha.transferInfo.uploadedTotal)
-        assertEquals(original[0], updatedAlpha.copy(transferInfo = original[0].transferInfo))
-
-        assertEquals(original[1], untouchedBeta)
     }
 
     @Test

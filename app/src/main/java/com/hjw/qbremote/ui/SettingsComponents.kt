@@ -7,9 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,7 +35,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -40,6 +47,7 @@ import com.hjw.qbremote.R
 import com.hjw.qbremote.data.AppLanguage
 import com.hjw.qbremote.data.ConnectionSettings
 import com.hjw.qbremote.data.ServerBackendType
+import com.hjw.qbremote.data.connectionUsesInsecurePublicEndpoint
 import com.hjw.qbremote.ui.theme.qbGlassCardColors
 import com.hjw.qbremote.ui.theme.qbGlassOutlineColor
 
@@ -69,6 +77,9 @@ internal fun SettingsPageContent(
     onAppLanguageChange: (AppLanguage) -> Unit,
     onDeleteFilesWhenNoSeedersChange: (Boolean) -> Unit,
     onDeleteFilesDefaultChange: (Boolean) -> Unit,
+    onCompletionNotificationsChange: (Boolean) -> Unit,
+    notificationPermissionDenied: Boolean,
+    onOpenNotificationSettings: () -> Unit,
 ) {
     var showLanguageMenu by remember { mutableStateOf(false) }
     var pendingAppLanguage by rememberSaveable { mutableStateOf(settings.appLanguage) }
@@ -133,6 +144,23 @@ internal fun SettingsPageContent(
                 checked = settings.deleteFilesDefault,
                 onCheckedChange = onDeleteFilesDefaultChange,
             )
+        }
+        SettingsPanelCard {
+            SettingSwitchRow(
+                title = stringResource(R.string.settings_completion_notifications),
+                checked = settings.completionNotificationsEnabled,
+                onCheckedChange = onCompletionNotificationsChange,
+            )
+            if (notificationPermissionDenied) {
+                Text(
+                    text = stringResource(R.string.settings_notification_permission_denied),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(onClick = onOpenNotificationSettings) {
+                    Text(stringResource(R.string.settings_open_notification_settings))
+                }
+            }
         }
     }
 }
@@ -273,6 +301,26 @@ internal fun ConnectionCard(
                 shape = RoundedCornerShape(14.dp),
             )
 
+            if (connectionUsesInsecurePublicEndpoint(state.settings)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_cleartext_public_warning),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -346,7 +394,15 @@ internal fun SettingSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .testTag("setting-switch:$title"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -355,7 +411,7 @@ internal fun SettingSwitchRow(
         )
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
         )
     }
 }

@@ -36,6 +36,7 @@ data class TorrentInfo(
     @SerializedName("tracker") val tracker: String = "",
     @SerializedName("save_path") val savePath: String = "",
     @SerializedName("tags") val tags: String = "",
+    @SerializedName("magnet_uri") val magnetUri: String = "",
 )
 
 data class DashboardData(

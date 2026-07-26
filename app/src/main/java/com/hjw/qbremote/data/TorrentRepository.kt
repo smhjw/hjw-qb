@@ -5,7 +5,6 @@ import com.hjw.qbremote.data.model.CountryPeerSnapshot
 import com.hjw.qbremote.data.model.DashboardData
 import com.hjw.qbremote.data.model.TorrentDetailData
 import com.hjw.qbremote.data.model.TorrentTracker
-import com.hjw.qbremote.data.model.TransferInfo
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -48,11 +47,22 @@ class TorrentRepository {
         return sessions[profileId]?.connected == true
     }
 
+    /**
+     * Marks a session as stale so the next [connect] performs a real login again.
+     * Call this when a fetch on the profile failed for reasons that may indicate a
+     * dead session (server restart, network change).
+     */
+    fun markDisconnected(profileId: String) {
+        sessions[profileId]?.connected = false
+    }
+
     suspend fun connect(
         profileId: String,
         settings: ConnectionSettings,
+        force: Boolean = false,
     ): Result<Unit> {
         require(profileId.isNotBlank()) { "Profile id cannot be blank." }
+        var reusableSession = false
         val entry = mutex.withLock {
             val existing = sessions[profileId]
             when {
@@ -72,10 +82,21 @@ class TorrentRepository {
                 }
 
                 else -> {
+                    // Skip the full login handshake when the session is already live
+                    // and nothing changed. The polling loop calls connect() on every
+                    // cycle; re-logging in each time hammers the server (and risks
+                    // qBittorrent's failed-auth IP ban on flaky links). A session that
+                    // died server-side self-heals via the 401/403 relogin in
+                    // executeWithRetry or via markDisconnected() on fetch failures.
+                    reusableSession = !force && existing.connected && existing.settings == settings
                     existing.settings = settings
                     existing
                 }
             }
+        }
+
+        if (reusableSession) {
+            return Result.success(Unit)
         }
 
         return entry.backend.connect(settings)
@@ -83,10 +104,10 @@ class TorrentRepository {
             .onFailure { entry.connected = false }
     }
 
-    suspend fun connect(settings: ConnectionSettings): Result<Unit> {
+    suspend fun connect(settings: ConnectionSettings, force: Boolean = false): Result<Unit> {
         val profileId = selectedProfileId
             ?: throw IllegalStateException("No selected server profile.")
-        return connect(profileId, settings)
+        return connect(profileId, settings, force)
     }
 
     fun clearSession(profileId: String) {
@@ -124,14 +145,6 @@ class TorrentRepository {
 
     suspend fun fetchTransferInfo() = withBackend { fetchTransferInfo() }
     suspend fun fetchTransferInfo(profileId: String) = withBackend(profileId) { fetchTransferInfo() }
-
-    suspend fun fetchTransferInfo(settings: ConnectionSettings): Result<TransferInfo> {
-        val backend = createBackend(settings.serverBackendType)
-        return backend.connect(settings).fold(
-            onSuccess = { backend.fetchTransferInfo() },
-            onFailure = { error -> Result.failure(error) },
-        )
-    }
 
     suspend fun fetchDashboard() = withBackend { fetchDashboard() }
     suspend fun fetchDashboard(profileId: String) = withBackend(profileId) { fetchDashboard() }
@@ -233,6 +246,11 @@ class TorrentRepository {
         downloadLimitBytes: Long,
         uploadLimitBytes: Long,
     ) = withBackend(profileId) { setTorrentSpeedLimit(hash, downloadLimitBytes, uploadLimitBytes) }
+
+    suspend fun fetchGlobalSpeedLimits(profileId: String) =
+        withBackend(profileId) { fetchGlobalSpeedLimits() }
+    suspend fun setGlobalSpeedLimits(profileId: String, limits: GlobalSpeedLimits) =
+        withBackend(profileId) { setGlobalSpeedLimits(limits) }
 
     suspend fun setTorrentShareRatio(hash: String, ratioLimit: Double) =
         withBackend { setTorrentShareRatio(hash, ratioLimit) }

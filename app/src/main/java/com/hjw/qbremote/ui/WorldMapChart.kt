@@ -1,9 +1,14 @@
 package com.hjw.qbremote.ui
 
+import android.content.Context
 import android.util.Xml
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -18,6 +23,8 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.MaterialTheme
 import com.hjw.qbremote.data.model.CountryUploadRecord
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import java.io.StringReader
 import kotlin.math.min
@@ -35,15 +42,40 @@ private data class ParsedWorldMap(
     val shapes: List<MapShape>,
 )
 
+// Parsing the 55KB SVG (hundreds of PathParser paths) takes long enough to drop
+// frames; remember{} alone re-parsed it every time the page was rebuilt (server
+// switch, theme change). Parse once per process, off the main thread.
+private object WorldMapAssetCache {
+    @Volatile
+    private var cached: ParsedWorldMap? = null
+
+    fun peek(): ParsedWorldMap? = cached
+
+    fun load(context: Context): ParsedWorldMap {
+        cached?.let { return it }
+        synchronized(this) {
+            cached?.let { return it }
+            val parsed = context.assets.open("world-map.min.svg").bufferedReader().use { reader ->
+                parseWorldMapSvg(reader.readText())
+            }
+            cached = parsed
+            return parsed
+        }
+    }
+}
+
 @Composable
 fun WorldMapChart(
     countries: List<CountryUploadRecord>,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val parsedMap = remember {
-        context.assets.open("world-map.min.svg").bufferedReader().use { reader ->
-            parseWorldMapSvg(reader.readText())
+    val context = LocalContext.current.applicationContext
+    var parsedMapOrNull by remember { mutableStateOf(WorldMapAssetCache.peek()) }
+    if (parsedMapOrNull == null) {
+        LaunchedEffect(Unit) {
+            parsedMapOrNull = withContext(Dispatchers.Default) {
+                WorldMapAssetCache.load(context)
+            }
         }
     }
     val merged = remember(countries) { mergeCountryUploadRecordsForDisplay(countries) }
@@ -74,6 +106,13 @@ fun WorldMapChart(
                 if (code == "CN") put("TW", color)
             }
         }
+    }
+
+    val parsedMap = parsedMapOrNull
+    if (parsedMap == null) {
+        // Keep the card's footprint stable while the map parses off-thread.
+        Canvas(modifier = modifier) {}
+        return
     }
 
     Canvas(modifier = modifier) {

@@ -224,6 +224,18 @@ interface QbApi {
     suspend fun addTorrentsForm(
         @FieldMap fields: Map<String, String>,
     ): Response<String>
+
+    @GET("api/v2/app/preferences")
+    suspend fun appPreferences(): com.google.gson.JsonObject
+
+    @FormUrlEncoded
+    @POST("api/v2/app/setPreferences")
+    suspend fun setAppPreferences(
+        @Field("json") json: String,
+    ): Response<Unit>
+
+    @GET("api/v2/transfer/speedLimitsMode")
+    suspend fun speedLimitsMode(): String
 }
 
 

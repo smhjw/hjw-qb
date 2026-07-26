@@ -30,6 +30,7 @@ internal fun LazyListScope.dashboardHomePageContent(
     onEndServerStackDrag: () -> Unit,
     onCancelServerStackDrag: () -> Unit,
     onOpenServerDashboard: (String) -> Unit,
+    onOpenGlobalSpeedLimits: () -> Unit,
     onDismissHomeTorrentEntryHint: () -> Unit,
     onOpenTorrentList: () -> Unit,
     onSwitchServerProfile: (String) -> Unit,
@@ -57,6 +58,7 @@ internal fun LazyListScope.dashboardHomePageContent(
                         onDragEnd = onEndServerStackDrag,
                         onDragCancel = onCancelServerStackDrag,
                         onOpenServerDashboard = onOpenServerDashboard,
+                        onOpenGlobalSpeedLimits = onOpenGlobalSpeedLimits,
                     )
                 } else {
                     val activeProfileId = state.activeServerProfileId
